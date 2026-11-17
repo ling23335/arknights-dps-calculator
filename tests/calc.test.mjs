@@ -374,6 +374,51 @@ test('autochess character trait scales SP recovery and attack by layer blocks', 
   assert.equal(result.stacks, 75);
 });
 
+test('autochess trait parser covers unconditional and flat attack bonuses', () => {
+  const raw = evaluateAutoChessTrait(
+    '攻击力和生命上限+60%',
+    [],
+  );
+  const flat = evaluateAutoChessTrait(
+    '【卡西米尔】每叠加5层，本干员部署后100秒内基础攻击力+10',
+    [100],
+  );
+
+  assert.equal(raw.effects.attackBonus, 60);
+  assert.equal(flat.effects.flatAttack, 10);
+});
+
+test('all relevant autochess traits expose a parsed numeric effect', () => {
+  const traits = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/autochess-traits.json', import.meta.url),
+      'utf8',
+    ),
+  ).traits;
+  const relevantTerms = [
+    '技力自然回复速度',
+    '攻击速度',
+    '攻击力',
+  ];
+  const unparsed = traits.filter((trait) => {
+    if (!relevantTerms.some((term) => trait.description.includes(term))) {
+      return false;
+    }
+    const effects = evaluateAutoChessTrait(
+      trait.description,
+      [100, 100],
+    ).effects;
+    return (
+      !effects.spPerSecond &&
+      !effects.attackBonus &&
+      !effects.aspd &&
+      !effects.flatAttack
+    );
+  });
+
+  assert.deepEqual(unparsed, []);
+});
+
 test('all 26 local covenants provide an effect summary', () => {
   const snapshot = JSON.parse(
     fs.readFileSync(

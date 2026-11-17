@@ -1,6 +1,6 @@
 # PRTS DPS Lab
 
-明日方舟“卫戍协议：盟约”推演与干员 DPS 对比页。干员基础数据来自 PRTS，盟约规则与精确参数来自本地游戏 V3_1 热更新解包。
+明日方舟“卫戍协议：盟约”推演与干员 DPS 对比页。干员属性、潜能、信赖和技能等级直接来自本地游戏 V3_1 的 `character_table` 与 `skill_table`；盟约、装备、敌人和卫戍特质同样来自本地热更新解包。
 
 ## 打开
 
@@ -82,10 +82,10 @@ npm run refresh
 npm run extract:reference
 npm run extract:ultimate
 npm run extract:traits
-npm run filter:operators
+npm run extract:operators
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`filter:operators` 生成仅供本页使用的 143 名卫戍干员快照。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 直接从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能等级与 Blackboard。写文件前会校验数量和必填文本。
 
 ## 验证
 
