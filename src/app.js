@@ -69,6 +69,7 @@
     },
     axis: 'covenant',
     chartCovenantId: defaultCovenantIds[0],
+    skillfulAura: true,
     killLimit: 5,
     slots: [],
     equipment: {
@@ -437,6 +438,9 @@
   }
 
   function bondMatchesOperator(bond, operator) {
+    if (bond.bondId === 'skillfulShip' && state.skillfulAura) {
+      return true;
+    }
     return bond.members.some(
       (member) => member.charId === operator.id || member.name === operator.name,
     );
@@ -675,18 +679,17 @@
         <span>扫描变量</span>
         <select id="chart-axis">
           <option value="covenant"${state.axis === 'covenant' ? ' selected' : ''}>盟约层数</option>
-          <option value="aspd"${state.axis === 'aspd' ? ' selected' : ''}>攻速加成</option>
           <option value="def"${state.axis === 'def' ? ' selected' : ''}>敌人防御</option>
           <option value="res"${state.axis === 'res' ? ' selected' : ''}>敌人法抗</option>
         </select>
       </label>
       <div class="chart-axis-presets">
         <button type="button" data-chart-axis-preset="covenant">盟约增长</button>
-        <button type="button" data-chart-axis-preset="aspd">阻回抖动</button>
+        <button type="button" data-chart-axis-preset="skillfulShip">灵巧抖动</button>
       </div>
       <p class="chart-axis-hint">${
-        state.axis === 'aspd'
-          ? '攻速横轴用于观察充能、阻回和普攻穿插造成的周期性抖动。'
+        state.axis === 'covenant' && focused?.bondId === 'skillfulShip'
+          ? '当前扫描灵巧层数，并按定量分析假设灵巧攻速覆盖全部方案。'
           : state.axis === 'covenant'
             ? '盟约横轴用于观察单条盟约提升时的整体 DPS 增长。'
             : '当前横轴为敌人参数。'
@@ -1192,7 +1195,6 @@
     slot,
     enemy = state.enemy,
     covenantLayerCap = null,
-    aspdOverride = null,
   ) {
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
@@ -1215,8 +1217,7 @@
       slot.aspd +
       covenantEffects.aspd +
       referenceEffects.aspd +
-      traitEffects.aspd +
-      (aspdOverride ?? 0);
+      traitEffects.aspd;
     const instantWindow = Math.max(
       0.05,
       stats.attackInterval + slot.intervalDelta,
@@ -1532,9 +1533,6 @@
       if (samples.at(-1) !== maxLayer) samples.push(maxLayer);
       return samples;
     }
-    if (state.axis === 'aspd') {
-      return Array.from({ length: 201 }, (_, index) => index);
-    }
     if (state.axis === 'res') {
       return Array.from({ length: 96 }, (_, index) => index);
     }
@@ -1562,14 +1560,11 @@
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const xs = chartSamples();
-    const aspdAxis = state.axis === 'aspd';
     const series = state.slots.map((slot) => ({
       name: `${findOperator(slot).name} · ${findSkill(slot)?.name ?? '普攻'}`,
       values: xs.map((value) =>
         covenantAxis
           ? calculateSlot(slot, state.enemy, value)
-          : aspdAxis
-            ? calculateSlot(slot, state.enemy, null, value)
           : calculateSlot(slot, { ...state.enemy, [state.axis]: value }),
       ),
       color: colorList[state.slots.indexOf(slot)].line,
@@ -1612,8 +1607,6 @@
       ctx.fillText(
         covenantAxis
           ? `${xs[index]}层`
-          : aspdAxis
-            ? `+${xs[index]}`
           : state.axis === 'res'
             ? `${xs[index]}%`
             : number.format(xs[index]),
@@ -1641,14 +1634,6 @@
 
     const currentIndex = covenantAxis
       ? xs.length - 1
-      : aspdAxis
-        ? Math.max(
-            0,
-            Math.min(
-              xs.length - 1,
-              Math.round(lastResults[0]?.totalAspd ?? 0),
-            ),
-          )
       : state.axis === 'res'
         ? Math.max(0, Math.min(xs.length - 1, state.enemy.res))
         : Math.round(
@@ -1686,7 +1671,7 @@
       }
     }
 
-    if (covenantAxis || aspdAxis) {
+    if (covenantAxis) {
       const enemy = enemyMap.get(state.enemy.selectedId);
       ctx.fillStyle = '#8fa0b5';
       ctx.textAlign = 'left';
@@ -1714,8 +1699,6 @@
     document.querySelector('#chart-title').textContent =
       covenantAxis
         ? `纯逐帧 DPS · 扫描${focusedCovenant()?.name ?? '盟约'}层数`
-        : aspdAxis
-          ? '纯逐帧 DPS · 随攻速加成变化'
         : state.axis === 'res'
         ? '逐帧平均 DPS · 随法术抗性变化'
         : '逐帧平均 DPS · 随防御力变化';
@@ -1890,7 +1873,13 @@
     chartControls.addEventListener('click', (event) => {
       const preset = event.target.closest('[data-chart-axis-preset]');
       if (!preset) return;
-      state.axis = preset.dataset.chartAxisPreset;
+      const value = preset.dataset.chartAxisPreset;
+      if (value === 'skillfulShip') {
+        state.axis = 'covenant';
+        state.chartCovenantId = 'skillfulShip';
+      } else {
+        state.axis = 'covenant';
+      }
       renderChartCovenantControls();
       updateResults();
     });
@@ -2251,8 +2240,6 @@
     const xLabel =
       state.axis === 'covenant'
         ? `${focusedCovenant()?.name ?? '盟约'} ${value} 层${index === chartModel.xs.length - 1 ? ' · 当前配置' : ''}`
-        : state.axis === 'aspd'
-          ? `攻击速度 +${value}`
         : state.axis === 'res'
           ? `${value}% 法抗`
           : `${number.format(value)} 防御`;
@@ -2280,7 +2267,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.3 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.4 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
