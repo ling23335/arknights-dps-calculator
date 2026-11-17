@@ -2249,7 +2249,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.2 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
