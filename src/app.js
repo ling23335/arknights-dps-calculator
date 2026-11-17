@@ -230,6 +230,7 @@
       slot.cooldown = 0;
       slot.charges = 1;
       slot.chargeBased = false;
+      slot.skillHits = 1;
       slot.spCost = 0;
       slot.spInitial = 0;
       slot.spMode = 'natural';
@@ -250,6 +251,7 @@
     slot.duration = level?.duration ?? 0;
     slot.charges = hints.charges || 1;
     slot.chargeBased = Boolean(hints.chargeBased);
+    slot.skillHits = hints.skillHits || 1;
     slot.spCost = level?.cost ?? 0;
     slot.spInitial = level?.initial ?? 0;
     slot.spMode =
@@ -525,65 +527,7 @@
         talent,
       ]),
     );
-
-    for (const [key, candidates] of groups) {
-      const talent = [...candidates].sort(
-        (a, b) =>
-          (a.phase ?? 0) - (b.phase ?? 0) ||
-          (a.level ?? 0) - (b.level ?? 0),
-      ).at(-1);
-      const moduleTalent = moduleTalents.get(talent.name);
-      if (moduleTalent) {
-        const board = moduleTalent.blackboard ?? {};
-        const attack = Number(board.atk ?? 0) * 100;
-        const aspd =
-          (Number(board.attack_speed_min ?? 0) +
-            Number(board.attack_speed_max ?? 0)) /
-          2;
-        const initialSp =
-          (Number(board.sp_min ?? 0) + Number(board.sp_max ?? 0)) / 2;
-        effects.attackBonus += attack;
-        effects.aspd += aspd;
-        effects.initialSp += initialSp;
-        if (attack || aspd || initialSp) {
-          applied.push({
-            name: `${talent.name}（${selectedModule.name}）`,
-            effects: {
-              attackBonus: attack,
-              aspd,
-              initialSp,
-            },
-          });
-        }
-        moduleTalents.delete(talent.name);
-        continue;
-      }
-
-      const mechanics = talent.mechanics ?? [];
-      const blocked = !talent.supported ||
-        mechanics.some((mechanic) => blockedMechanics.has(mechanic));
-      if (blocked) {
-        unsupported.push({
-          name: talent.name,
-          reason: mechanics.join(' / ') || '条件型机制',
-        });
-        continue;
-      }
-      const talentEffects = talent.effects ?? {};
-      for (const key of Object.keys(effects)) {
-        effects[key] += Number(talentEffects[key] ?? 0);
-      }
-      if (Object.keys(talentEffects).length) {
-        applied.push({
-          name: talent.name,
-          effects: talentEffects,
-          conditional: talent.conditional,
-          mechanics,
-        });
-      }
-    }
-
-    for (const [name, talent] of moduleTalents) {
+    const applyModuleTalent = (talent, name) => {
       const board = talent.blackboard ?? {};
       const attack = Number(board.atk ?? 0) * 100;
       const aspd =
@@ -605,6 +549,45 @@
           },
         });
       }
+    };
+
+    for (const candidates of groups.values()) {
+      const talent = [...candidates].sort(
+        (a, b) =>
+          (a.phase ?? 0) - (b.phase ?? 0) ||
+          (a.level ?? 0) - (b.level ?? 0),
+      ).at(-1);
+      const moduleTalent = moduleTalents.get(talent.name);
+      if (moduleTalent) {
+        applyModuleTalent(moduleTalent, talent.name);
+        moduleTalents.delete(talent.name);
+        continue;
+      }
+
+      const mechanics = talent.mechanics ?? [];
+      const blocked = !talent.supported ||
+        mechanics.some((mechanic) => blockedMechanics.has(mechanic));
+      if (blocked) {
+        unsupported.push({
+          name: talent.name,
+          reason: mechanics.join(' / ') || '条件型机制',
+        });
+        continue;
+      }
+      const talentEffects = talent.effects ?? {};
+      calc.mergeTalentEffects(effects, talentEffects);
+      if (Object.keys(talentEffects).length) {
+        applied.push({
+          name: talent.name,
+          effects: talentEffects,
+          conditional: talent.conditional,
+          mechanics,
+        });
+      }
+    }
+
+    for (const [name, talent] of moduleTalents) {
+      applyModuleTalent(talent, name);
     }
 
     return { effects, applied, unsupported, module: selectedModule ?? null };
@@ -1423,6 +1406,12 @@
       potential: slot.potential,
       module: slot.module,
     });
+    const skillOutput = calc.classifySkillOutput(
+      level?.description ?? '',
+    );
+    const operatorCanDamage =
+      operator.profession !== '医疗' ||
+      calc.classifySkillOutput(operator.trait).hasDamage;
     const covenant = combineCovenantEffects(slot, covenantLayerCap);
     const covenantEffects = covenant.effects;
     const reference = combineReferenceEffects(slot);
@@ -1441,11 +1430,7 @@
       traitEffects.aspd +
       talentEffects.aspd +
       Number(talent.module?.aspd ?? 0);
-    const instantWindow = Math.max(
-      0.05,
-      stats.attackInterval + slot.intervalDelta,
-    );
-    const activeWindow = slot.duration > 0 ? slot.duration : instantWindow;
+    const activeWindow = Math.max(0, slot.duration);
     const enemyHp =
       enemy.hp ??
       (state.enemy.useStronghold
@@ -1464,20 +1449,25 @@
         traitEffects.attackBonus +
         talentEffects.attackBonus,
       normalMultiplier:
-        slot.normalMultiplier *
-          covenantEffects.damageMultiplier *
-          talentEffects.damageMultiplier +
-        covenantEffects.extraDamageMultiplier +
-        referenceEffects.extraDamageMultiplier +
-        talentEffects.extraDamageMultiplier,
+        operatorCanDamage
+          ? slot.normalMultiplier *
+              covenantEffects.damageMultiplier *
+              talentEffects.damageMultiplier +
+            covenantEffects.extraDamageMultiplier +
+            referenceEffects.extraDamageMultiplier +
+            talentEffects.extraDamageMultiplier
+          : 0,
       activeMultiplier:
-        slot.activeMultiplier *
-          covenantEffects.damageMultiplier *
-          talentEffects.damageMultiplier *
-          (1 + covenantEffects.activeAttackBonus / 100) +
-        covenantEffects.extraDamageMultiplier +
-        referenceEffects.extraDamageMultiplier +
-        talentEffects.extraDamageMultiplier,
+        skillOutput.suppressActive ||
+        (!operatorCanDamage && !skillOutput.hasDamage)
+          ? 0
+          : slot.activeMultiplier *
+              covenantEffects.damageMultiplier *
+              talentEffects.damageMultiplier *
+              (1 + covenantEffects.activeAttackBonus / 100) +
+            covenantEffects.extraDamageMultiplier +
+            referenceEffects.extraDamageMultiplier +
+            talentEffects.extraDamageMultiplier,
       normalAspd: chargeBased ? totalAspd : 0,
       aspd: chargeBased ? 0 : totalAspd,
       intervalDelta: slot.intervalDelta,
@@ -1788,9 +1778,9 @@
         autoChessTraitSummary(item.autochessTrait);
       card.querySelector('[data-role="talent-impact"]').textContent =
         talentSummary(item.talent);
-      const conversion = equipmentMap.get(
-        item.slot.conversionEquipmentId,
-      );
+      const conversion = item.reference.conversionBondId
+        ? equipmentMap.get(item.slot.conversionEquipmentId)
+        : null;
       const equipmentDps = item.equipmentBase.result.cycleDps;
       const convertedDps = item.result.cycleDps;
       card.querySelector('[data-role="conversion-impact"]').textContent =
@@ -1977,7 +1967,11 @@
       if (covenantAxis) {
         ctx.fillStyle = '#ffb168';
         ctx.textAlign = 'right';
-        ctx.fillText('终极模拟', currentX - 7, margin.top + 9);
+        ctx.fillText(
+          state.enemy.useStronghold ? '终极模拟' : '手动参数',
+          currentX - 7,
+          margin.top + 9,
+        );
       }
       for (const item of series) {
         ctx.fillStyle = '#0b1017';
@@ -1997,13 +1991,15 @@
     }
 
     if (covenantAxis) {
-      const enemy = enemyMap.get(state.enemy.selectedId);
+      const enemy = state.enemy.useStronghold
+        ? enemyMap.get(state.enemy.selectedId)
+        : null;
       ctx.fillStyle = '#8fa0b5';
       ctx.textAlign = 'left';
       const enemyLabel =
         width < 500
-          ? `终极敌 ${enemy?.enemyIndex ?? '手动'} · ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`
-          : `终极敌人：${enemy?.name ?? '手动参数'} · ${number.format(enemy?.hp ?? 0)} 生命 / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
+          ? `${enemy ? '终极敌' : '手动敌'} ${enemy?.enemyIndex ?? ''} · ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`
+          : `${enemy ? `终极敌人：${enemy.name} · ${number.format(enemy.hp ?? 0)} 生命` : '手动敌人参数'} / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
       ctx.fillText(
         enemyLabel,
         margin.left + 8,
@@ -2603,7 +2599,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.8 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.9 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),

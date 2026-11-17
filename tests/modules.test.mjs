@@ -35,6 +35,7 @@ test('local module snapshot is complete and belongs to autochess operators', () 
         (module) =>
           module.levels.length === 3 &&
           module.name &&
+          module.upgradedTalent &&
           module.id,
       ),
     true,

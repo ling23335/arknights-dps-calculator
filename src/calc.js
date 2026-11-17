@@ -51,21 +51,86 @@ function resolveOperatorStats(
 }
 
 function estimateSkillHints(description = '') {
-  let attackMultiplier = 1;
-  let match = description.match(/造成相当于攻击力\s*(\d+(?:\.\d+)?)%/);
-  if (match) {
-    attackMultiplier = Number(match[1]) / 100;
-  } else if ((match = description.match(/攻击力提升至\s*(\d+(?:\.\d+)?)%/))) {
-    attackMultiplier = Number(match[1]) / 100;
-  } else if ((match = description.match(/攻击力(?:提升|增加|提高|\+)\s*(\d+(?:\.\d+)?)%/))) {
-    attackMultiplier = 1 + Number(match[1]) / 100;
-  }
+  const scalePatterns = [
+    /造成[^。\n]{0,24}?相当于攻击力\s*(\d+(?:\.\d+)?)%/,
+    /造成[^。\n]{0,24}?相当于\s*(\d+(?:\.\d+)?)%攻击力/,
+    /造成[^。\n]{0,24}?攻击力\s*(\d+(?:\.\d+)?)%/,
+    /造成[^。\n]{0,24}?(\d+(?:\.\d+)?)%攻击力/,
+    /攻击力\s*(\d+(?:\.\d+)?)%\s*的[^。\n]{0,12}(?:伤害|连击|连发|攻击)/,
+    /造成[^。\n]{0,20}?(\d+(?:\.\d+)?)%的?(?:范围)?(?:物理|法术|真实|元素)?伤害/,
+    /(\d+(?:\.\d+)?)%的攻击力/,
+  ];
+  const scaleMatch = scalePatterns
+    .map((pattern) => description.match(pattern))
+    .find(Boolean);
+  const directScale = scaleMatch ? Number(scaleMatch[1]) / 100 : 1;
+  const rampMatch = description.match(
+    /攻击力从\s*(\d+(?:\.\d+)?)%\s*[^。\n]{0,4}?(?:提升至|提高至|增加至|增至)\s*(\d+(?:\.\d+)?)%/,
+  );
+  const rampScale = rampMatch
+    ? (Number(rampMatch[1]) + Number(rampMatch[2])) / 200
+    : 0;
+  const toBuffMatch =
+    description.match(
+      /攻击力[^。\n]{0,8}?(?:提升至|提高至|增加至|增至)\s*([+]?)\s*(\d+(?:\.\d+)?)%/,
+    );
+  const addBuffMatch =
+    description.match(
+      /攻击力(?:提升|增加|提高|\+)\s*(\d+(?:\.\d+)?)%/,
+    ) ??
+    description.match(
+      /攻击力[^。\n]{0,8}?\+\s*(\d+(?:\.\d+)?)%/,
+    );
+  const toBuffScale = toBuffMatch
+    ? (toBuffMatch[1] ? 1 : 0) + Number(toBuffMatch[2]) / 100
+    : 0;
+  const addBuffScale = addBuffMatch
+    ? 1 + Number(addBuffMatch[1]) / 100
+    : 0;
+  const attackMultiplier = Math.max(
+    directScale,
+    rampMatch ? rampScale : toBuffScale,
+    addBuffScale,
+  );
 
   const interval = description.match(
     /攻击间隔[^。；，,]*[（(]\s*([-+]?\d+(?:\.\d+)?)\s*[）)]/,
   );
   const aspdMatch = description.match(/攻击速度\s*[+＋]\s*(\d+(?:\.\d+)?)/);
   const chargeMatch = description.match(/可充能\s*(\d+)\s*次/);
+  const numberMap = {
+    一: 1,
+    两: 2,
+    二: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9,
+    十: 10,
+  };
+  const parseCount = (value) =>
+    Number(value) || numberMap[value] || 1;
+  const hitPatterns = [
+    /([0-9一二两三四五六七八九十]+)连(?:击|发)/,
+    /(?:连续攻击|连续射击|进行)([0-9一二两三四五六七八九十]+)次/,
+    /(?:连续攻击|进行)([0-9一二两三四五六七八九十]+)次攻击/,
+    /造成([0-9一二两三四五六七八九十]+)次相当于/,
+    /(?:发动|造成)([0-9一二两三四五六七八九十]+)次(?:斩击|攻击)/,
+    /([0-9一二两三四五六七八九十]+)次攻击/,
+  ];
+  const hitMatch = hitPatterns
+    .map((pattern) => description.match(pattern))
+    .find(Boolean);
+  const extraHitMatch = description.match(
+    /(?:额外|追加)(?:造成|攻击|射击)?([0-9一二两三四五六七八九十]+)次/,
+  );
+  const skillHits = Math.max(
+    hitMatch ? parseCount(hitMatch[1]) : 1,
+    extraHitMatch ? parseCount(extraHitMatch[1]) + 1 : 1,
+  );
 
   return {
     attackMultiplier,
@@ -73,14 +138,55 @@ function estimateSkillHints(description = '') {
     aspd: aspdMatch ? Number(aspdMatch[1]) : 0,
     charges: chargeMatch ? Number(chargeMatch[1]) : 0,
     chargeBased: Boolean(chargeMatch),
+    skillHits,
   };
 }
 
 function inferDamageType(trait = '', skillDescription = '') {
   const text = `${skillDescription} ${trait}`;
-  if (text.includes('真实伤害') || text.includes('元素伤害')) return 'true';
-  if (text.includes('法术伤害')) return 'arts';
+  if (
+    text.includes('真实伤害') ||
+    text.includes('元素伤害') ||
+    /(?:伤害类型|伤害)(?:变为|转为)真实/.test(text)
+  ) {
+    return 'true';
+  }
+  if (
+    text.includes('法术伤害') ||
+    /(?:伤害类型|伤害)(?:变为|转为)法术/.test(text)
+  ) {
+    return 'arts';
+  }
   return 'physical';
+}
+
+function classifySkillOutput(description = '') {
+  const text = String(description ?? '');
+  const hasDamage =
+    /(?:造成|打出|命中|使[^。\n]{0,24}受到)[^。\n]{0,30}(?:伤害|损伤)/.test(
+      text,
+    ) ||
+    /(?:物理|法术|真实|元素)伤害/.test(text) ||
+    /(?:伤害类型|伤害)(?:变为|转为)/.test(text);
+  const stopsAttack = text.includes('停止攻击');
+  const healingOnly =
+    !hasDamage &&
+    /(?:治疗|恢复[^。\n]{0,12}生命|屏障)/.test(text);
+  return {
+    hasDamage,
+    suppressActive: !hasDamage && (stopsAttack || healingOnly),
+  };
+}
+
+function mergeTalentEffects(target, source = {}) {
+  for (const [key, rawValue] of Object.entries(source)) {
+    if (!(key in target)) continue;
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) continue;
+    if (key === 'damageMultiplier') target[key] *= value;
+    else target[key] += value;
+  }
+  return target;
 }
 
 function calculateDpsModel({
@@ -313,7 +419,12 @@ function simulateFrameDps({
       normalHit,
       activeHit,
       normalDps: normalTime > 0 ? normalDamage / normalTime : 0,
-      activeDps: activeTime > 0 ? activeDamage / activeTime : 0,
+      activeDps:
+        activeTime > 0
+          ? activeDamage / activeTime
+          : activeHitCount > 0
+            ? activeDamage / (activeHitCount * activeInterval)
+            : 0,
       cycleDps: measuredTime > 0 ? totalDamage / measuredTime : 0,
       dps: measuredTime > 0 ? totalDamage / measuredTime : 0,
       totalDamage,
@@ -420,7 +531,12 @@ function simulateFrameDps({
     normalHit,
     activeHit,
     normalDps: normalTime > 0 ? normalDamage / normalTime : 0,
-    activeDps: activeTime > 0 ? activeDamage / activeTime : 0,
+    activeDps:
+      activeTime > 0
+        ? activeDamage / activeTime
+        : activeHitCount > 0
+          ? activeDamage / (activeHitCount * activeInterval)
+          : 0,
     cycleDps: roundedTime > 0 ? totalDamage / roundedTime : 0,
     dps: roundedTime > 0 ? totalDamage / roundedTime : 0,
     totalDamage,
@@ -814,6 +930,8 @@ globalThis.ArkCalc = {
   resolveOperatorStats,
   estimateSkillHints,
   inferDamageType,
+  classifySkillOutput,
+  mergeTalentEffects,
   calculateDpsModel,
   simulateFrameDps,
   matchOperatorName,

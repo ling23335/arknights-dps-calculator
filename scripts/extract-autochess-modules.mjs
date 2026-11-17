@@ -12,10 +12,13 @@ const operators = JSON.parse(
 const decodedRoot =
   process.env.ARK_HOT_DECODED ||
   'D:/NEWgame/arknights-extracted/hot-decoded';
-const uniequipPath = findFile(decodedRoot, 'uniequip_table8b1bb5.json');
+const uniequipPath = findFile(
+  decodedRoot,
+  /^uniequip_table.*\.json$/,
+);
 const battleEquipPath = findFile(
   decodedRoot,
-  'battle_equip_table91e6b6.json',
+  /^battle_equip_table.*\.json$/,
 );
 if (!uniequipPath || !battleEquipPath) {
   throw new Error('未找到模组数据表');
@@ -25,12 +28,18 @@ const battleEquip = JSON.parse(
   fs.readFileSync(battleEquipPath, 'utf8'),
 ).Equips;
 
-function findFile(root, fileName) {
+function findFile(root, matcher) {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const fullPath = path.join(root, entry.name);
-    if (entry.isFile() && entry.name === fileName) return fullPath;
+    const matches =
+      matcher instanceof RegExp
+        ? matcher.test(entry.name)
+        : typeof matcher === 'function'
+        ? matcher(entry.name)
+        : entry.name === matcher;
+    if (entry.isFile() && matches) return fullPath;
     if (entry.isDirectory()) {
-      const found = findFile(fullPath, fileName);
+      const found = findFile(fullPath, matcher);
       if (found) return found;
     }
   }
@@ -170,6 +179,16 @@ for (const operator of operators.operators) {
 const modules = Object.values(modulesByCharId).flat();
 if (modules.length !== 205) {
   throw new Error(`模组数量异常：${modules.length}`);
+}
+if (
+  modules.some(
+    (module) =>
+      !module.name ||
+      !module.upgradedTalent ||
+      module.levels.length < 3,
+  )
+) {
+  throw new Error('存在缺少名称、升级天赋或三级数据的模组');
 }
 const knownIds = new Set(operators.operators.map((operator) => operator.id));
 if (

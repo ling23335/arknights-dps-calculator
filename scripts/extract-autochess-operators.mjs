@@ -14,24 +14,36 @@ const covenants = JSON.parse(
 const fullOperators = JSON.parse(
   fs.readFileSync(path.join(projectRoot, 'data/operators.json'), 'utf8'),
 );
-const characterPath = covenants.source.characterTable;
+const decodedRoot =
+  process.env.ARK_HOT_DECODED ||
+  path.dirname(path.dirname(covenants.source.characterTable));
+const characterPath = findFile(
+  decodedRoot,
+  /^character_table.*\.json$/,
+);
+if (!characterPath) throw new Error('未找到 character_table JSON');
 const characters = JSON.parse(
   fs.readFileSync(characterPath, 'utf8'),
 ).Characters;
 const skillPath = findFile(
-  process.env.ARK_HOT_DECODED ||
-    'D:/NEWgame/arknights-extracted/hot-decoded',
-  'skill_tableafb859.json',
+  decodedRoot,
+  /^skill_table.*\.json$/,
 );
 if (!skillPath) throw new Error('未找到 skill_table JSON');
 const skills = JSON.parse(fs.readFileSync(skillPath, 'utf8')).Skills;
 
-function findFile(root, fileName) {
+function findFile(root, matcher) {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const fullPath = path.join(root, entry.name);
-    if (entry.isFile() && entry.name === fileName) return fullPath;
+    const matches =
+      matcher instanceof RegExp
+        ? matcher.test(entry.name)
+        : typeof matcher === 'function'
+        ? matcher(entry.name)
+        : entry.name === matcher;
+    if (entry.isFile() && matches) return fullPath;
     if (entry.isDirectory()) {
-      const found = findFile(fullPath, fileName);
+      const found = findFile(fullPath, matcher);
       if (found) return found;
     }
   }

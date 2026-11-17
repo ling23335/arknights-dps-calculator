@@ -10,6 +10,8 @@ const {
   calculateDpsModel,
   simulateFrameDps,
   inferDamageType,
+  classifySkillOutput,
+  mergeTalentEffects,
   matchOperatorName,
   evaluateCovenant,
   evaluateAutoChessTrait,
@@ -135,9 +137,109 @@ test('skill hints extract stored charge count', () => {
   assert.equal(hints.chargeBased, true);
 });
 
+test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
+  const amiya = estimateSkillHints(
+    '每次攻击变为攻击力60%的8连发，随机攻击范围内的目标',
+  );
+  const mlynar = estimateSkillHints(
+    '攻击造成相当于190%攻击力的二连击。',
+  );
+  const chen = estimateSkillHints(
+    '下次攻击对周围最多6名地面敌人造成两次相当于攻击力220%的物理伤害',
+  );
+  const air = estimateSkillHints(
+    '立即发射箭矢对目标进行攻击力140%的5次攻击；可充能3次',
+  );
+  const pursuit = estimateSkillHints(
+    '下次攻击造成相当于攻击力175%的物理伤害，并连续攻击两次',
+  );
+  const followUp = estimateSkillHints(
+    '下次攻击额外造成一次相当于攻击力180%的法术伤害',
+  );
+  const lemuen = estimateSkillHints(
+    '期间攻击力从180%逐渐提升至425%',
+  );
+  const rampedArts = estimateSkillHints(
+    '每秒造成一次相当于攻击力75%的法术伤害',
+  );
+  const healing = estimateSkillHints(
+    '下次治疗可以恢复相当于攻击力190%的生命；可充能2次',
+  );
+
+  assert.deepEqual(
+    [amiya.attackMultiplier, amiya.skillHits],
+    [0.6, 8],
+  );
+  assert.deepEqual(
+    [mlynar.attackMultiplier, mlynar.skillHits],
+    [1.9, 2],
+  );
+  assert.deepEqual(
+    [chen.attackMultiplier, chen.skillHits],
+    [2.2, 2],
+  );
+  assert.deepEqual(
+    [air.attackMultiplier, air.skillHits],
+    [1.4, 5],
+  );
+  assert.equal(pursuit.skillHits, 2);
+  assert.equal(followUp.skillHits, 2);
+  assert.equal(lemuen.attackMultiplier, 3.025);
+  assert.equal(rampedArts.attackMultiplier, 0.75);
+  assert.equal(healing.attackMultiplier, 1);
+});
+
 test('damage type prefers explicit art damage in the skill text', () => {
   assert.equal(inferDamageType('攻击造成法术伤害', '造成物理伤害'), 'arts');
   assert.equal(inferDamageType('攻击造成物理伤害', ''), 'physical');
+  assert.equal(
+    inferDamageType('攻击造成法术伤害', '伤害类型变为真实'),
+    'true',
+  );
+});
+
+test('non-damage and stop-attack skills are classified conservatively', () => {
+  assert.deepEqual(classifySkillOutput('攻击造成相当于攻击力200%的伤害'), {
+    hasDamage: true,
+    suppressActive: false,
+  });
+  assert.deepEqual(classifySkillOutput('停止攻击敌人；防御力+120%'), {
+    hasDamage: false,
+    suppressActive: true,
+  });
+  assert.deepEqual(classifySkillOutput('恢复相当于攻击力180%的生命'), {
+    hasDamage: false,
+    suppressActive: true,
+  });
+  assert.deepEqual(classifySkillOutput('攻击力+60%，攻击速度+60'), {
+    hasDamage: false,
+    suppressActive: false,
+  });
+});
+
+test('talent multipliers use multiplication while additive stats accumulate', () => {
+  const effects = {
+    attackBonus: 10,
+    damageMultiplier: 1,
+    flatHitDamage: 0,
+  };
+
+  mergeTalentEffects(effects, {
+    attackBonus: 20,
+    damageMultiplier: 1.17,
+    flatHitDamage: 50,
+    unknown: 999,
+  });
+  mergeTalentEffects(effects, {
+    attackBonus: 5,
+    damageMultiplier: 1.1,
+  });
+
+  assert.deepEqual(effects, {
+    attackBonus: 35,
+    damageMultiplier: 1.287,
+    flatHitDamage: 50,
+  });
 });
 
 test('dps model combines mitigation, attack interval and skill cycle', () => {
@@ -316,6 +418,7 @@ test('instant skills can recharge after their triggering attack', () => {
 
   assert.equal(result.skillCasts >= 3, true);
   assert.equal(result.activeDamage > result.normalDamage, true);
+  assert.equal(result.activeDps > 0, true);
 });
 
 test('charged instant skills use SP recovery blocks and can lower DPS at high attack speed', () => {
@@ -346,6 +449,8 @@ test('charged instant skills use SP recovery blocks and can lower DPS at high at
 
   assert.equal(slow.skillCasts > fast.skillCasts, true);
   assert.equal(slow.cycleDps > fast.cycleDps, true);
+  assert.equal(slow.skillHits, slow.skillCasts);
+  assert.equal(fast.skillHits, fast.skillCasts);
 });
 
 test('natural SP recovery accelerates duration skills through the same state machine', () => {
