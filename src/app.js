@@ -1658,12 +1658,11 @@
       (state.enemy.useStronghold
         ? enemyMap.get(state.enemy.selectedId)?.hp
         : Infinity);
-    const result = calc.simulateFrameDps({
+    const simulationInput = {
       attack:
         stats.attack + traitEffects.flatAttack + talentEffects.flatAttack,
       baseInterval: stats.attackInterval,
       damageType: slot.damageType,
-      enemy: { ...enemy, hp: enemyHp },
       attackBonus:
         slot.attackBonus +
         covenantEffects.attackBonus +
@@ -1736,7 +1735,21 @@
               frameRate: 30,
             }
           : null,
+    };
+    const result = calc.simulateFrameDps({
+      ...simulationInput,
+      enemy: { ...enemy, hp: enemyHp },
     });
+    const equivalentWindow = result.killTime ?? simulationInput.horizon;
+    const dummyResult = calc.simulateFrameDps({
+      ...simulationInput,
+      enemy: { def: 0, res: 0, hp: Infinity },
+      horizon: equivalentWindow,
+    });
+    const equivalentHp =
+      Number.isFinite(enemyHp) && result.totalDamage > 0
+        ? enemyHp * (dummyResult.totalDamage / result.totalDamage)
+        : dummyResult.totalDamage;
     return {
       slot,
       operator,
@@ -1745,6 +1758,8 @@
       stats,
       activeWindow,
       result,
+      equivalentHp,
+      equivalentWindow,
       covenant,
       reference,
       autochessTrait,
@@ -1946,6 +1961,7 @@
             <dl>
               <dt>当前逐帧 DPS</dt><dd>${number.format(dps)}</dd>
               <dt>预计击杀时间</dt><dd>${timeLabel}</dd>
+              <dt>等效白板血量</dt><dd>${number.format(item.equivalentHp)}</dd>
               <dt>限定时间</dt><dd>${decimal.format(limit)}s</dd>
               <dt>仍需 DPS</dt><dd>${met ? '0' : number.format(Math.ceil(gap))}</dd>
             </dl>
@@ -2052,6 +2068,7 @@
             <td>${number.format(item.result.activeDps)}</td>
             <td class="cycle-cell">${number.format(item.result.cycleDps)}</td>
             <td>${item.result.killTime === null ? '&gt; 120s' : `${decimal.format(item.result.killTime)}s`}</td>
+            <td>${number.format(item.equivalentHp)}</td>
             <td>${decimal.format(item.result.normalInterval)}s</td>
             <td>${escapeHtml(covenantSummary(item.covenant))}</td>
             <td>${number.format(item.equipmentBase.result.cycleDps)}</td>
@@ -2748,6 +2765,7 @@
         '技能DPS',
         '周期DPS',
         '击杀时间',
+        '等效白板血量',
         '模拟帧数',
         '普攻命中次数',
         '技能命中次数',
@@ -2788,6 +2806,7 @@
           item.result.activeDps,
           item.result.cycleDps,
           item.result.killTime ?? '',
+          item.equivalentHp,
           item.result.ticks,
           item.result.normalHits,
           item.result.skillHits,
@@ -2884,7 +2903,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.13 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.14 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
