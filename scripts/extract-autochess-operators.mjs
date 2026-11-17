@@ -96,6 +96,111 @@ function extractLevel(level) {
   };
 }
 
+function extractTalent(candidate, talentIndex) {
+  const blackboard = candidate.Blackboard ?? {};
+  const description = stripMarkup(
+    renderTemplate(candidate.Description, blackboard),
+  );
+  const effects = {};
+  if (description.includes('攻击力') && Number.isFinite(blackboard.atk)) {
+    effects.attackBonus = blackboard.atk * 100;
+  }
+  if (Number.isFinite(blackboard.attack_speed)) {
+    effects.aspd = blackboard.attack_speed;
+  }
+  if (Number.isFinite(blackboard.sp_recovery_per_sec)) {
+    effects.spPerSecond = blackboard.sp_recovery_per_sec;
+  }
+  if (
+    description.includes('法术抗性') &&
+    Number.isFinite(blackboard.magic_resistance) &&
+    blackboard.magic_resistance < 0
+  ) {
+    effects.resistanceIgnore = Math.abs(blackboard.magic_resistance);
+  }
+  if (
+    Number.isFinite(blackboard.sp_min) ||
+    Number.isFinite(blackboard.sp_max)
+  ) {
+    const min = Number(blackboard.sp_min ?? blackboard.sp_max ?? 0);
+    const maxExclusive = Number(
+      blackboard.sp_max ?? blackboard.sp_min ?? min,
+    );
+    effects.initialSp = (min + Math.max(min, maxExclusive - 1)) / 2;
+  }
+  if (
+    Number.isFinite(blackboard.prob) &&
+    Number.isFinite(blackboard.atk_scale)
+  ) {
+    effects.extraDamageMultiplier =
+      blackboard.prob * blackboard.atk_scale;
+  } else if (
+    Number.isFinite(blackboard.atk_scale) &&
+    description.includes('攻击造成')
+  ) {
+    effects.damageMultiplier = blackboard.atk_scale;
+  }
+  if (Number.isFinite(blackboard.atk_addition)) {
+    effects.flatHitDamage = blackboard.atk_addition;
+  }
+
+  const mechanicChecks = [
+    ['概率', 'probability'],
+    ['几率', 'probability'],
+    ['阻挡', 'blocking'],
+    ['受到伤害', 'onReceiveDamage'],
+    ['被击倒', 'onDeath'],
+    ['击倒敌人', 'onKill'],
+    ['攻击范围内', 'range'],
+    ['随机', 'random'],
+    ['生命值', 'conditionalHp'],
+    ['部署后', 'deployment'],
+    ['技能', 'skill'],
+    ['停顿', 'control'],
+    ['晕眩', 'control'],
+    ['冻结', 'control'],
+  ];
+  const mechanics = mechanicChecks
+    .filter(([term]) => description.includes(term))
+    .map(([, mechanic]) => mechanic);
+  const conditionalTerms = [
+    '时',
+    '若',
+    '概率',
+    '阻挡',
+    '受到伤害',
+    '被击倒',
+    '范围内',
+    '首次',
+    '低于',
+    '高于',
+    '未受到',
+    '部署后',
+    '技能期间',
+    '敌人',
+    '随机',
+  ];
+  const conditional = conditionalTerms.some((term) =>
+    description.includes(term),
+  );
+  const phase = candidate.UnlockCondition?.Phase ?? 0;
+  const level = candidate.UnlockCondition?.Level ?? 1;
+  return {
+    group: `第${talentIndex + 1}天赋`,
+    name: candidate.Name,
+    condition: `精英${phase} Lv${level}`,
+    phase,
+    level,
+    description,
+    effect: description,
+    blackboard,
+    effects,
+    supported: Object.keys(effects).length > 0,
+    conditional,
+    mechanics: [...new Set(mechanics)],
+  };
+}
+
 const operators = traits.traits
   .map((trait) => {
     const character = characters[trait.charId];
@@ -190,15 +295,10 @@ const operators = traits.traits
       },
       potential: { mods: potentialMods },
       skills: extractedSkills,
-      talents: (character.Talents ?? []).flatMap((talent) =>
-        (talent.Candidates ?? []).map((candidate) => ({
-          group: talent.TalentIndex ?? '',
-          name: candidate.Name,
-          condition: candidate.UnlockCondition
-            ? `精英${candidate.UnlockCondition.Phase + 1}`
-            : '',
-          effect: stripMarkup(candidate.Description),
-        })),
+      talents: (character.Talents ?? []).flatMap((talent, index) =>
+        (talent.Candidates ?? []).map((candidate) =>
+          extractTalent(candidate, index),
+        ),
       ),
       modules: [],
     };

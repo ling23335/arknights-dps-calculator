@@ -7,6 +7,7 @@
   const equipmentSnapshot = window.ARK_EQUIPMENT_SNAPSHOT;
   const commandSnapshot = window.ARK_COMMANDS_SNAPSHOT;
   const traitSnapshot = window.ARK_AUTOCHESS_TRAITS_SNAPSHOT;
+  const moduleSnapshot = window.ARK_AUTOCHESS_MODULES_SNAPSHOT;
   const calc = window.ArkCalc;
   if (
     !snapshot?.operators?.length ||
@@ -15,6 +16,7 @@
     !equipmentSnapshot?.equipment?.length ||
     !commandSnapshot?.commands?.length ||
     !traitSnapshot?.traits?.length ||
+    !moduleSnapshot?.moduleCount ||
     !calc
   ) {
     document.body.innerHTML =
@@ -25,6 +27,14 @@
   const operators = snapshot.operators.filter(
     (operator) => operator.profession && operator.stats,
   );
+  for (const operator of operators) {
+    operator.modules = (moduleSnapshot.modulesByCharId[operator.id] ?? []).map(
+      (module) => ({
+        ...module,
+        ...(module.levels?.at(-1) ?? {}),
+      }),
+    );
+  }
   const operatorMap = new Map(operators.map((operator) => [operator.name, operator]));
   const covenants = covenantSnapshot.covenants;
   const covenantMap = new Map(covenants.map((bond) => [bond.bondId, bond]));
@@ -313,7 +323,7 @@
         (module) =>
           `<option value="${escapeHtml(module.name)}"${
             module.name === selected ? ' selected' : ''
-          }>${escapeHtml(module.name)}</option>`,
+          }>${escapeHtml(module.name)} · Lv.${module.level ?? 3}</option>`,
       ),
     ].join('');
   }
@@ -473,6 +483,131 @@
       trait,
       ...calc.evaluateAutoChessTrait(trait.description, layers),
     };
+  }
+
+  function emptyTalentEffects() {
+    return {
+      attackBonus: 0,
+      flatAttack: 0,
+      aspd: 0,
+      spPerSecond: 0,
+      initialSp: 0,
+      extraDamageMultiplier: 0,
+      damageMultiplier: 1,
+      resistanceIgnore: 0,
+      flatHitDamage: 0,
+    };
+  }
+
+  function combineTalentEffects(operator, slot) {
+    const effects = emptyTalentEffects();
+    const applied = [];
+    const unsupported = [];
+    const blockedMechanics = new Set([
+      'onDeath',
+      'blocking',
+      'conditionalHp',
+      'onHit',
+    ]);
+    const groups = new Map();
+    for (const talent of operator.talents ?? []) {
+      const key = talent.group || talent.name;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(talent);
+    }
+
+    const selectedModule = (operator.modules ?? []).find(
+      (module) => module.name === slot.module,
+    );
+    const moduleTalents = new Map(
+      (selectedModule?.talents ?? []).map((talent) => [
+        talent.name,
+        talent,
+      ]),
+    );
+
+    for (const [key, candidates] of groups) {
+      const talent = [...candidates].sort(
+        (a, b) =>
+          (a.phase ?? 0) - (b.phase ?? 0) ||
+          (a.level ?? 0) - (b.level ?? 0),
+      ).at(-1);
+      const moduleTalent = moduleTalents.get(talent.name);
+      if (moduleTalent) {
+        const board = moduleTalent.blackboard ?? {};
+        const attack = Number(board.atk ?? 0) * 100;
+        const aspd =
+          (Number(board.attack_speed_min ?? 0) +
+            Number(board.attack_speed_max ?? 0)) /
+          2;
+        const initialSp =
+          (Number(board.sp_min ?? 0) + Number(board.sp_max ?? 0)) / 2;
+        effects.attackBonus += attack;
+        effects.aspd += aspd;
+        effects.initialSp += initialSp;
+        if (attack || aspd || initialSp) {
+          applied.push({
+            name: `${talent.name}（${selectedModule.name}）`,
+            effects: {
+              attackBonus: attack,
+              aspd,
+              initialSp,
+            },
+          });
+        }
+        moduleTalents.delete(talent.name);
+        continue;
+      }
+
+      const mechanics = talent.mechanics ?? [];
+      const blocked = !talent.supported ||
+        mechanics.some((mechanic) => blockedMechanics.has(mechanic));
+      if (blocked) {
+        unsupported.push({
+          name: talent.name,
+          reason: mechanics.join(' / ') || '条件型机制',
+        });
+        continue;
+      }
+      const talentEffects = talent.effects ?? {};
+      for (const key of Object.keys(effects)) {
+        effects[key] += Number(talentEffects[key] ?? 0);
+      }
+      if (Object.keys(talentEffects).length) {
+        applied.push({
+          name: talent.name,
+          effects: talentEffects,
+          conditional: talent.conditional,
+          mechanics,
+        });
+      }
+    }
+
+    for (const [name, talent] of moduleTalents) {
+      const board = talent.blackboard ?? {};
+      const attack = Number(board.atk ?? 0) * 100;
+      const aspd =
+        (Number(board.attack_speed_min ?? 0) +
+          Number(board.attack_speed_max ?? 0)) /
+        2;
+      const initialSp =
+        (Number(board.sp_min ?? 0) + Number(board.sp_max ?? 0)) / 2;
+      effects.attackBonus += attack;
+      effects.aspd += aspd;
+      effects.initialSp += initialSp;
+      if (attack || aspd || initialSp) {
+        applied.push({
+          name: `${name}（${selectedModule.name}）`,
+          effects: {
+            attackBonus: attack,
+            aspd,
+            initialSp,
+          },
+        });
+      }
+    }
+
+    return { effects, applied, unsupported, module: selectedModule ?? null };
   }
 
   function covenantTypeLabel(bond) {
@@ -1205,6 +1340,7 @@
         <p class="covenant-impact" data-role="reference-impact"></p>
         <p class="covenant-impact" data-role="conversion-impact"></p>
         <p class="covenant-impact" data-role="trait-impact"></p>
+        <p class="covenant-impact" data-role="talent-impact"></p>
         <p class="description" data-role="description"></p>
         <details class="advanced">
           <summary>高级参数与手动覆盖</summary>
@@ -1293,6 +1429,8 @@
     const referenceEffects = reference.effects;
     const autochessTrait = combineAutoChessTrait(slot);
     const traitEffects = autochessTrait.effects;
+    const talent = combineTalentEffects(operator, slot);
+    const talentEffects = talent.effects;
     const chargeBased = slot.chargeBased && slot.duration <= 0;
     const useSpState =
       slot.spMode === 'natural' || slot.spMode === 'attack';
@@ -1300,7 +1438,9 @@
       slot.aspd +
       covenantEffects.aspd +
       referenceEffects.aspd +
-      traitEffects.aspd;
+      traitEffects.aspd +
+      talentEffects.aspd +
+      Number(talent.module?.aspd ?? 0);
     const instantWindow = Math.max(
       0.05,
       stats.attackInterval + slot.intervalDelta,
@@ -1312,7 +1452,8 @@
         ? enemyMap.get(state.enemy.selectedId)?.hp
         : Infinity);
     const result = calc.simulateFrameDps({
-      attack: stats.attack + traitEffects.flatAttack,
+      attack:
+        stats.attack + traitEffects.flatAttack + talentEffects.flatAttack,
       baseInterval: stats.attackInterval,
       damageType: slot.damageType,
       enemy: { ...enemy, hp: enemyHp },
@@ -1320,17 +1461,23 @@
         slot.attackBonus +
         covenantEffects.attackBonus +
         referenceEffects.attackBonus +
-        traitEffects.attackBonus,
+        traitEffects.attackBonus +
+        talentEffects.attackBonus,
       normalMultiplier:
-        slot.normalMultiplier * covenantEffects.damageMultiplier +
+        slot.normalMultiplier *
+          covenantEffects.damageMultiplier *
+          talentEffects.damageMultiplier +
         covenantEffects.extraDamageMultiplier +
-        referenceEffects.extraDamageMultiplier,
+        referenceEffects.extraDamageMultiplier +
+        talentEffects.extraDamageMultiplier,
       activeMultiplier:
         slot.activeMultiplier *
           covenantEffects.damageMultiplier *
+          talentEffects.damageMultiplier *
           (1 + covenantEffects.activeAttackBonus / 100) +
         covenantEffects.extraDamageMultiplier +
-        referenceEffects.extraDamageMultiplier,
+        referenceEffects.extraDamageMultiplier +
+        talentEffects.extraDamageMultiplier,
       normalAspd: chargeBased ? totalAspd : 0,
       aspd: chargeBased ? 0 : totalAspd,
       intervalDelta: slot.intervalDelta,
@@ -1343,7 +1490,9 @@
         referenceEffects.spCostMultiplier,
       defenseIgnore: slot.defenseIgnore,
       resistanceIgnore:
-        slot.resistanceIgnore + covenantEffects.resistanceShred,
+        slot.resistanceIgnore +
+        covenantEffects.resistanceShred +
+        talentEffects.resistanceIgnore,
       defensePenetration: Math.max(
         covenantEffects.defensePenetration,
         referenceEffects.defensePenetration,
@@ -1354,6 +1503,7 @@
       ),
       tick: 1 / 60,
       horizon: 120,
+      flatHitDamage: talentEffects.flatHitDamage,
       sp:
         useSpState
           ? {
@@ -1362,8 +1512,12 @@
                 slot.spCost *
                 covenantEffects.spCostMultiplier *
                 referenceEffects.spCostMultiplier,
-              initial: slot.spInitial + covenantEffects.initialSp,
-              perSecond: 1 + traitEffects.spPerSecond,
+              initial:
+                slot.spInitial +
+                covenantEffects.initialSp +
+                talentEffects.initialSp,
+              perSecond:
+                1 + traitEffects.spPerSecond + talentEffects.spPerSecond,
               perAttack: 1,
               maxCharges: chargeBased ? slot.charges : 1,
               blockFrames: chargeBased ? 36 : 0,
@@ -1382,6 +1536,7 @@
       covenant,
       reference,
       autochessTrait,
+      talent,
       totalAspd,
       chargeBased,
     };
@@ -1465,6 +1620,55 @@
     }
     if (info.effects.flatAttack) {
       parts.push(`基础攻击 +${decimal.format(info.effects.flatAttack)}`);
+    }
+    return parts.join(' · ');
+  }
+
+  function talentSummary(info) {
+    const parts = [];
+    if (info.module) {
+      const moduleStats = [
+        info.module.attack ? `攻击+${number.format(info.module.attack)}` : '',
+        info.module.aspd ? `攻速+${number.format(info.module.aspd)}` : '',
+      ].filter(Boolean);
+      parts.push(
+        `模组 ${info.module.name}${moduleStats.length ? `（${moduleStats.join('，')}）` : ''}`,
+      );
+    }
+    for (const talent of info.applied) {
+      const effects = [];
+      if (talent.effects.attackBonus) {
+        effects.push(`攻击+${decimal.format(talent.effects.attackBonus)}%`);
+      }
+      if (talent.effects.flatAttack) {
+        effects.push(`攻击+${number.format(talent.effects.flatAttack)}`);
+      }
+      if (talent.effects.aspd) {
+        effects.push(`攻速+${decimal.format(talent.effects.aspd)}`);
+      }
+      if (talent.effects.spPerSecond) {
+        effects.push(`回技+${decimal.format(talent.effects.spPerSecond)}/秒`);
+      }
+      if (talent.effects.initialSp) {
+        effects.push(`初始技力+${decimal.format(talent.effects.initialSp)}`);
+      }
+      if (talent.effects.extraDamageMultiplier) {
+        effects.push(
+          `期望附加${decimal.format(talent.effects.extraDamageMultiplier * 100)}%`,
+        );
+      }
+      if (talent.effects.resistanceIgnore) {
+        effects.push(`无视法抗${decimal.format(talent.effects.resistanceIgnore)}`);
+      }
+      if (talent.effects.flatHitDamage) {
+        effects.push(`每次命中+${number.format(talent.effects.flatHitDamage)}`);
+      }
+      parts.push(
+        `${talent.name}${effects.length ? `：${effects.join('，')}` : ''}`,
+      );
+    }
+    for (const talent of info.unsupported) {
+      parts.push(`${talent.name}：${talent.reason}，未自动折算`);
     }
     return parts.join(' · ');
   }
@@ -1582,6 +1786,8 @@
         referenceSummary(item.reference);
       card.querySelector('[data-role="trait-impact"]').textContent =
         autoChessTraitSummary(item.autochessTrait);
+      card.querySelector('[data-role="talent-impact"]').textContent =
+        talentSummary(item.talent);
       const conversion = equipmentMap.get(
         item.slot.conversionEquipmentId,
       );
@@ -1616,6 +1822,10 @@
             <td>${escapeHtml(referenceSummary(item.reference))}${
               autoChessTraitSummary(item.autochessTrait)
                 ? `<br>${escapeHtml(autoChessTraitSummary(item.autochessTrait))}`
+                : ''
+            }${
+              talentSummary(item.talent)
+                ? `<br>${escapeHtml(talentSummary(item.talent))}`
                 : ''
             }</td>
             <td>${decimal.format(uptime)}%</td>
@@ -2393,7 +2603,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.7 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.8 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),

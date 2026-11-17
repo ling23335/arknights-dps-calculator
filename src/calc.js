@@ -170,6 +170,7 @@ function simulateFrameDps({
   resistanceIgnore = 0,
   defensePenetration = 0,
   resistancePenetration = 0,
+  flatHitDamage = 0,
   sp = null,
   tick = 1 / 60,
   horizon = 120,
@@ -193,17 +194,21 @@ function simulateFrameDps({
     res: Math.max(0, (enemy.res ?? 0) * resistanceScale - resistanceIgnore),
   };
   const normalHit =
-    damageAfterMitigation(
+    (damageAfterMitigation(
       effectiveAttack * normalMultiplier,
       damageType,
       mitigatedEnemy,
-    ) * Math.max(1, normalHits);
+    ) +
+      Math.max(0, flatHitDamage)) *
+    Math.max(1, normalHits);
   const activeHit =
-    damageAfterMitigation(
+    (damageAfterMitigation(
       effectiveAttack * activeMultiplier,
       damageType,
       mitigatedEnemy,
-    ) * Math.max(1, skillHits);
+    ) +
+      Math.max(0, flatHitDamage)) *
+    Math.max(1, skillHits);
 
   if (sp?.maxCharges > 0) {
     const cost = Math.max(epsilon, Number(sp.cost) || 1);

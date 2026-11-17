@@ -9,6 +9,8 @@
     "extract:ultimate": "node scripts/ultimate-enemies.mjs",
     "extract:traits": "node scripts/autochess-traits.mjs",
     "extract:operators": "node scripts/extract-autochess-operators.mjs",
+    "extract:modules": "node scripts/extract-autochess-modules.mjs",
+    "audit:roster": "node scripts/audit-roster.mjs",
     "serve": "python -m http.server 4173 --bind 0.0.0.0"
   },
   "devDependencies": {

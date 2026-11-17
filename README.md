@@ -31,6 +31,7 @@ http://电脑IPv4地址:4173/
 ## 功能
 
 - 从本期卫戍协议实际可出现的 143 名干员中任选三名，比较普攻、技能期和周期 DPS，并包含森蚺指令特殊干员“暴躁铁皮”。
+- 205 个本地模组覆盖 138 名卫戍干员，支持选择三级模组属性与升级天赋。
 - 每个方案都支持按干员名称搜索，输入片段后也可自动匹配。
 - 支持满信赖、潜能、模组、技能等级、敌人防御与法抗。
 - 完整收录当前 26 条盟约，可按名称或成员干员搜索，并配置层数、激活人数。
@@ -49,6 +50,7 @@ http://电脑IPv4地址:4173/
 - 图表可切换到“灵巧”层数作为横轴；定量分析默认假设灵巧攻速覆盖当前全部方案，用于直接观察点燃充能周期造成的锯齿状 DPS 抖动。
 - 自动估算技能攻击倍率、攻速、攻击间隔、持续时间与回转，并给出击杀时间、命中次数和技能开启次数。
 - 可手动覆盖倍率、段数、无视防御、无视法抗和伤害类型。
+- 普通天赋会按本地 Blackboard 自动折算攻击、攻速、回技、初始技力、概率期望、法抗无视和固定附加伤害；阵亡、阻挡、受击、召唤等条件会明确标注为未自动折算。
 - 曲线默认以实际盟约层数作为横轴，展示纯 DPS 增长；敌人保持当前终极数值不变，也可切换为随防御力或法术抗性变化。
 - 图表左侧可选择一条盟约作为扫描变量；只改变该盟约层数，其余已选盟约保持当前层数，切换盟约后横轴范围同步更新。
 - 图例直接显示当前盟约配置下的终极模拟 DPS，并支持当前结果 CSV 导出。
@@ -73,6 +75,8 @@ http://电脑IPv4地址:4173/
 - `data/commands.js`：供直接打开网页时加载的指令数据副本。
 - `data/autochess-traits.json`：143 条卫戍协议干员专属特质。
 - `data/autochess-traits.js`：供直接打开网页时加载的干员特质副本。
+- `data/autochess-modules.json`：205 个本地模组及三级属性、升级天赋和 Blackboard。
+- `data/autochess-modules.js`：供直接打开网页时加载的模组副本。
 
 重新抓取：
 
@@ -83,9 +87,11 @@ npm run extract:reference
 npm run extract:ultimate
 npm run extract:traits
 npm run extract:operators
+npm run extract:modules
+npm run audit:roster
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 直接从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能等级与 Blackboard。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计。写文件前会校验数量和必填文本。
 
 ## 验证
 

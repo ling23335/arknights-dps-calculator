@@ -286,6 +286,21 @@ test('fixed-frame simulation stops at the ultimate enemy hp', () => {
   assert.equal(result.dps, 500);
 });
 
+test('fixed-frame simulation adds flat per-hit talent damage', () => {
+  const result = simulateFrameDps({
+    attack: 100,
+    baseInterval: 1,
+    damageType: 'arts',
+    enemy: { def: 0, res: 50, hp: Infinity },
+    flatHitDamage: 50,
+    tick: 0.1,
+    horizon: 2,
+  });
+
+  assert.equal(result.normalHit, 100);
+  assert.equal(result.totalDamage, 200);
+});
+
 test('instant skills can recharge after their triggering attack', () => {
   const result = simulateFrameDps({
     attack: 100,
