@@ -179,13 +179,14 @@ h1 em {
 .document-nav {
   position: sticky;
   z-index: 60;
-  top: 10px;
+  top: 12px;
   display: flex;
+  flex-direction: column;
   gap: 5px;
-  align-items: center;
-  margin: 18px 0 0;
+  align-items: stretch;
+  margin: 0;
   padding: 7px;
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid rgba(78, 101, 128, 0.58);
   border-radius: 12px;
   background: rgba(11, 16, 23, 0.92);
@@ -194,8 +195,7 @@ h1 em {
 }
 
 .document-nav-label {
-  flex: 0 0 auto;
-  padding: 0 9px 0 4px;
+  padding: 3px 7px 6px;
   color: var(--muted);
   font-size: 9px;
   font-weight: 700;
@@ -204,7 +204,6 @@ h1 em {
 }
 
 .document-nav a {
-  flex: 0 0 auto;
   padding: 7px 11px;
   border-radius: 7px;
   color: #aab8c8;
@@ -221,7 +220,7 @@ h1 em {
 }
 
 [id] {
-  scroll-margin-top: 76px;
+  scroll-margin-top: 24px;
 }
 
 .module.is-highlight,
@@ -584,6 +583,173 @@ body.has-maximized-module {
   background: rgba(255, 255, 255, 0.035);
   color: var(--soft);
   font-size: 10px;
+}
+
+.kill-module {
+  padding: 22px;
+}
+
+.kill-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.kill-head h2 {
+  margin-bottom: 4px;
+  font-size: 24px;
+}
+
+.kill-head p:last-child {
+  max-width: 720px;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.kill-dashboard,
+.kill-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kill-results {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.kill-card,
+.kill-result-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  background: rgba(9, 15, 23, 0.62);
+}
+
+.kill-card > span,
+.kill-requirement label > span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.kill-card h3 {
+  margin: 4px 0 3px;
+  color: var(--orange);
+  font-size: 20px;
+}
+
+.kill-card > p {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.kill-target-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.kill-target-stats span {
+  padding: 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--soft);
+  font-size: 9px;
+}
+
+.kill-requirement {
+  display: grid;
+  gap: 12px;
+}
+
+.kill-requirement label {
+  display: grid;
+  gap: 5px;
+}
+
+.kill-requirement input {
+  width: 150px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+
+.kill-requirement div > span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.kill-requirement strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--teal);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kill-requirement small {
+  color: #7f91a7;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.kill-result-card {
+  border-top: 3px solid var(--slot-color);
+}
+
+.kill-result-card.met {
+  background: rgba(114, 221, 197, 0.07);
+}
+
+.kill-result-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.kill-result-card h3 {
+  margin: 5px 0 10px;
+  color: var(--slot-color);
+  font-size: 16px;
+}
+
+.kill-result-card dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.kill-result-card dt {
+  color: var(--muted);
+}
+
+.kill-result-card dd {
+  margin: 0;
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.kill-result-card strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--teal);
+  font-size: 11px;
 }
 
 .section-title {
@@ -1727,7 +1893,14 @@ footer {
   }
 
   .document-nav {
+    grid-column: 1 / -1;
     top: 6px;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  [id] {
+    scroll-margin-top: 70px;
   }
 
   .masthead {
@@ -1759,6 +1932,16 @@ footer {
   .reference-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .kill-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .kill-dashboard,
+  .kill-results {
+    grid-template-columns: 1fr;
   }
 
   .slot-card {
@@ -1819,6 +2002,14 @@ footer {
   .reference-tools,
   .reference-list {
     grid-template-columns: 1fr;
+  }
+
+  .kill-module {
+    padding: 16px;
+  }
+
+  .kill-target-stats {
+    grid-template-columns: 1fr 1fr;
   }
 
   .reference-count {

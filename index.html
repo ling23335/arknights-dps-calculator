@@ -26,18 +26,19 @@
       </div>
     </header>
 
-    <nav id="document-nav" class="document-nav" aria-label="页面目录">
-      <span class="document-nav-label">文档目录</span>
-      <a href="#chart-section">战况图</a>
-      <a href="#covenant-panel">卫戍盟约</a>
-      <a href="#equipment-section">装备</a>
-      <a href="#command-section">指令</a>
-      <a href="#enemy-section">敌人</a>
-      <a href="#dps-section">DPS 对比</a>
-    </nav>
-
     <div class="workspace">
       <aside class="sidebar">
+        <nav id="document-nav" class="document-nav" aria-label="页面目录">
+          <span class="document-nav-label">项目栏</span>
+          <a href="#chart-section">战况图</a>
+          <a href="#covenant-panel">卫戍盟约</a>
+          <a href="#equipment-section">装备</a>
+          <a href="#command-section">指令</a>
+          <a href="#enemy-section">敌人</a>
+          <a href="#kill-section">击杀</a>
+          <a href="#dps-section">DPS 对比</a>
+        </nav>
+
         <section id="enemy-section" class="panel controls-panel">
           <div class="section-title">
             <span>01</span>
@@ -81,7 +82,7 @@
               <span>曲线横轴</span>
             </span>
             <select id="chart-axis">
-              <option value="covenant" selected>随盟约效果提升</option>
+              <option value="covenant" selected>随盟约层数增长</option>
               <option value="def">随防御力变化</option>
               <option value="res">随法术抗性变化</option>
             </select>
@@ -118,7 +119,7 @@
           <div class="chart-head">
             <div>
               <p class="eyebrow">FRAME-BY-FRAME ULTIMATE</p>
-              <h2 id="chart-title">逐帧平均 DPS · 随盟约效果提升</h2>
+              <h2 id="chart-title">纯逐帧 DPS · 随盟约层数增长</h2>
             </div>
             <div class="chart-head-right">
               <div id="chart-summary" class="chart-summary">等待计算</div>
@@ -130,7 +131,7 @@
           </div>
           <div class="module-body">
             <div class="chart-wrap">
-              <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约效果提升的曲线"></canvas>
+              <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约层数增长的曲线"></canvas>
               <div id="tooltip" class="tooltip" hidden></div>
             </div>
             <div id="chart-legend" class="chart-legend"></div>
@@ -295,6 +296,42 @@
                 </table>
               </div>
             </section>
+          </div>
+        </section>
+
+        <section id="kill-section" class="module panel kill-module" data-module="kill">
+          <div class="kill-head">
+            <div>
+              <p class="eyebrow">TARGET KILL CALCULATOR</p>
+              <h2>敌人击杀计算器</h2>
+              <p>使用当前终极模拟敌人的生命值与防御参数，计算三套方案的击杀时间，以及限定时间内所需的最低 DPS。</p>
+            </div>
+            <div class="module-tools">
+              <button type="button" data-module-collapse>收起</button>
+              <button type="button" data-module-maximize>放大</button>
+            </div>
+          </div>
+          <div class="module-body">
+            <div class="kill-dashboard">
+              <article class="kill-card">
+                <span>当前目标</span>
+                <h3 id="kill-target-name">读取中</h3>
+                <p id="kill-target-meta"></p>
+                <div id="kill-target-stats" class="kill-target-stats"></div>
+              </article>
+              <article class="kill-card kill-requirement">
+                <label>
+                  <span>限定击杀时间</span>
+                  <input id="kill-time-limit" type="number" min="0.1" max="3600" step="0.5" value="5">
+                </label>
+                <div>
+                  <span>限定时间内最低 DPS</span>
+                  <strong id="kill-required-dps">—</strong>
+                </div>
+                <small>按“终极敌人生命值 ÷ 限定秒数”计算，以页面当前 DPS 口径为准。</small>
+              </article>
+            </div>
+            <div id="kill-results" class="kill-results"></div>
           </div>
         </section>
       </main>

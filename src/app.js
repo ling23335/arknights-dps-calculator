@@ -63,6 +63,7 @@
       selectedId: defaultEnemyId,
     },
     axis: 'covenant',
+    killLimit: 5,
     slots: [],
     equipment: {
       enabled: true,
@@ -119,6 +120,7 @@
   const chart = document.querySelector('#chart');
   const tooltip = document.querySelector('#tooltip');
   let chartModel = null;
+  let lastResults = [];
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -377,7 +379,7 @@
     );
   }
 
-  function combineCovenantEffects(slot, layerScale = 1) {
+  function combineCovenantEffects(slot, layerCap = null) {
     const effects = {
       attackBonus: 0,
       activeAttackBonus: 0,
@@ -394,7 +396,7 @@
       damageReduction: 0,
     };
     const applied = [];
-    if (!state.covenants.enabled || layerScale <= 0) {
+    if (!state.covenants.enabled || layerCap === 0) {
       return { effects, applied };
     }
     const operator = findOperator(slot);
@@ -402,9 +404,13 @@
     for (const bond of selectedBonds()) {
       const settings = state.covenants.settings[bond.bondId];
       if (!settings || !bondMatchesOperator(bond, operator)) continue;
+      const effectiveLayer =
+        layerCap === null
+          ? settings.layer
+          : Math.min(settings.layer, Math.max(0, layerCap));
       const evaluation = calc.evaluateCovenant(
         bond,
-        settings.layer * Math.max(0, Math.min(1, layerScale)),
+        effectiveLayer,
         settings.members,
       );
       if (!evaluation.active) continue;
@@ -1044,7 +1050,7 @@
   function calculateSlot(
     slot,
     enemy = state.enemy,
-    covenantLayerScale = 1,
+    covenantLayerCap = null,
   ) {
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
@@ -1054,7 +1060,7 @@
       potential: slot.potential,
       module: slot.module,
     });
-    const covenant = combineCovenantEffects(slot, covenantLayerScale);
+    const covenant = combineCovenantEffects(slot, covenantLayerCap);
     const covenantEffects = covenant.effects;
     const reference = combineReferenceEffects(slot);
     const referenceEffects = reference.effects;
@@ -1175,8 +1181,74 @@
     return parts.length ? parts.join(' · ') : '未启用装备或指令修正';
   }
 
+  function formatKillDuration(seconds) {
+    if (!Number.isFinite(seconds)) return '无法击杀';
+    if (seconds < 60) return `${decimal.format(seconds)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = Math.round(seconds % 60);
+    return `${minutes}m ${rest}s`;
+  }
+
+  function renderKillCalculator() {
+    const enemy = enemyMap.get(state.enemy.selectedId);
+    const limit = Math.max(0.1, Number(state.killLimit) || 5);
+    const results =
+      lastResults.length > 0
+        ? lastResults
+        : state.slots.map((slot) => calculateSlot(slot));
+    const timeInput = document.querySelector('#kill-time-limit');
+    if (document.activeElement !== timeInput) timeInput.value = limit;
+    document.querySelector('#kill-target-name').textContent =
+      enemy?.name ?? '未选择敌人';
+    document.querySelector('#kill-target-meta').textContent = enemy
+      ? `${enemy.ultimate?.modeName ?? '终极模拟'} · ${enemyCategoryLabel(enemy)} · ${enemy.enemyIndex || enemy.enemyId}`
+      : '请先在上方敌人参数中选择目标';
+    document.querySelector('#kill-target-stats').innerHTML = enemy
+      ? `
+        <span>生命<br><b>${number.format(enemy.hp)}</b></span>
+        <span>攻击<br><b>${number.format(enemy.attack)}</b></span>
+        <span>防御<br><b>${number.format(enemy.defense)}</b></span>
+        <span>法抗<br><b>${decimal.format(enemy.resistance)}%</b></span>`
+      : '<span>暂无目标数据</span>';
+    const requiredDps = enemy ? enemy.hp / limit : Infinity;
+    document.querySelector('#kill-required-dps').textContent =
+      Number.isFinite(requiredDps)
+        ? number.format(Math.ceil(requiredDps))
+        : '—';
+    document.querySelector('#kill-results').innerHTML = results
+      .map((item, index) => {
+        const dps = item.result.cycleDps;
+        const estimatedKill =
+          item.result.killTime ??
+          (dps > 0 && enemy ? enemy.hp / dps : Infinity);
+        const met = estimatedKill <= limit;
+        const timeLabel =
+          item.result.killTime === null
+            ? `约 ${formatKillDuration(estimatedKill)}`
+            : formatKillDuration(item.result.killTime);
+        const gap = Math.max(0, requiredDps - dps);
+        return `
+          <article class="kill-result-card ${met ? 'met' : ''}" style="--slot-color:${colorList[index].line}">
+            <header>
+              <span>方案 ${String.fromCharCode(65 + index)}</span>
+              <span>${met ? '限定时间内可击杀' : '未达到限定 DPS'}</span>
+            </header>
+            <h3>${escapeHtml(item.operator.name)} · ${escapeHtml(item.skill?.name ?? '仅普攻')}</h3>
+            <dl>
+              <dt>当前逐帧 DPS</dt><dd>${number.format(dps)}</dd>
+              <dt>预计击杀时间</dt><dd>${timeLabel}</dd>
+              <dt>限定时间</dt><dd>${decimal.format(limit)}s</dd>
+              <dt>仍需 DPS</dt><dd>${met ? '0' : number.format(Math.ceil(gap))}</dd>
+            </dl>
+            <strong>${met ? '达标' : `低于最低线 ${number.format(Math.ceil(gap))} DPS`}</strong>
+          </article>`;
+      })
+      .join('');
+  }
+
   function updateResults() {
     const results = state.slots.map((slot) => calculateSlot(slot));
+    lastResults = results;
     results.forEach((item, index) => {
       const card = slotsElement.querySelector(`[data-slot="${index}"]`);
       card.querySelector('[data-role="cycle"]').textContent = number.format(
@@ -1232,12 +1304,25 @@
     document.querySelector('#chart-summary').textContent = best
       ? `终极逐帧最高：${best.operator.name} · ${best.skill?.name ?? '普攻'}，${number.format(best.result.cycleDps)} DPS`
       : '等待计算';
+    renderKillCalculator();
     drawChart();
   }
 
   function chartSamples() {
     if (state.axis === 'covenant') {
-      return Array.from({ length: 21 }, (_, index) => index * 5);
+      const maxLayer = Math.max(
+        1,
+        ...selectedBonds().map(
+          (bond) => state.covenants.settings[bond.bondId]?.layer ?? 0,
+        ),
+      );
+      return [
+        ...new Set(
+          Array.from({ length: 21 }, (_, index) =>
+            Math.round((index * maxLayer) / 20),
+          ),
+        ),
+      ];
     }
     if (state.axis === 'res') {
       return Array.from({ length: 96 }, (_, index) => index);
@@ -1270,7 +1355,7 @@
       name: `${findOperator(slot).name} · ${findSkill(slot)?.name ?? '普攻'}`,
       values: xs.map((value) =>
         covenantAxis
-          ? calculateSlot(slot, state.enemy, value / 100)
+          ? calculateSlot(slot, state.enemy, value)
           : calculateSlot(slot, { ...state.enemy, [state.axis]: value }),
       ),
       color: colorList[state.slots.indexOf(slot)].line,
@@ -1312,7 +1397,7 @@
       ctx.textAlign = 'center';
       ctx.fillText(
         covenantAxis
-          ? `${xs[index]}%`
+          ? `${xs[index]}层`
           : state.axis === 'res'
             ? `${xs[index]}%`
             : number.format(xs[index]),
@@ -1404,7 +1489,7 @@
       .join('');
     document.querySelector('#chart-title').textContent =
       covenantAxis
-        ? '逐帧平均 DPS · 随盟约效果提升'
+        ? '纯逐帧 DPS · 随盟约层数增长'
         : state.axis === 'res'
         ? '逐帧平均 DPS · 随法术抗性变化'
         : '逐帧平均 DPS · 随防御力变化';
@@ -1690,6 +1775,23 @@
     });
   }
 
+  function bindKillEvents() {
+    const input = document.querySelector('#kill-time-limit');
+    input.addEventListener('input', (event) => {
+      const value = Number(event.target.value);
+      if (!(value > 0)) return;
+      state.killLimit = Math.max(0.1, value);
+      renderKillCalculator();
+    });
+    input.addEventListener('change', (event) => {
+      state.killLimit = Math.min(
+        3600,
+        Math.max(0.1, Number(event.target.value) || 5),
+      );
+      renderKillCalculator();
+    });
+  }
+
   function bindModuleControls() {
     const restore = () => {
       for (const module of document.querySelectorAll('.module.maximized')) {
@@ -1751,6 +1853,7 @@
     state.equipment.enabled = true;
     state.commands.enabled = false;
     state.commands.selectedIds = [];
+    state.killLimit = 5;
     state.slots = [
       createSlot('艾雅法拉', '点燃'),
       createSlot('艾雅法拉', '火山'),
@@ -1874,7 +1977,7 @@
     tooltip.style.top = `${chartModel.margin.top + 14}px`;
     const xLabel =
       state.axis === 'covenant'
-        ? `${value}% 盟约效果${value === 100 ? ' · 终极模拟' : ''}`
+        ? `${value} 层盟约${index === chartModel.xs.length - 1 ? ' · 终极模拟' : ''}`
         : state.axis === 'res'
           ? `${value}% 法抗`
           : `${number.format(value)} 防御`;
@@ -1930,6 +2033,7 @@
   bindCovenantEvents();
   bindReferenceEvents();
   bindEnemyEvents();
+  bindKillEvents();
   bindModuleControls();
   bindDocumentNavigation();
   updateResults();
