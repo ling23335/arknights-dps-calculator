@@ -80,6 +80,7 @@
     axis: 'covenant',
     chartCovenantId: defaultCovenantIds[0],
     skillfulAura: true,
+    activeSlot: 0,
     killLimit: 5,
     slots: [],
     equipment: {
@@ -624,6 +625,63 @@
     return bond.members.some(
       (member) => member.charId === operator.id || member.name === operator.name,
     );
+  }
+
+  function covenantImpactsOperator(bond, operator) {
+    if (!bond || !bondMatchesOperator(bond, operator)) return false;
+    const settings = state.covenants.settings[bond.bondId];
+    const evaluation = calc.evaluateCovenant(
+      bond,
+      settings?.layer ?? 0,
+      settings?.members ?? 0,
+    );
+    const effects = evaluation.effects;
+    const hasDpsEffect = Boolean(
+      effects.attackBonus ||
+      effects.activeAttackBonus ||
+      effects.aspd ||
+      effects.damageMultiplier !== 1 ||
+      effects.resistanceShred ||
+      effects.extraDamageMultiplier ||
+      effects.defensePenetration ||
+      effects.resistancePenetration ||
+      effects.initialSp,
+    );
+    const trait = traitMap.get(operator.id);
+    const hasTraitSp =
+      trait?.bondIds.includes(bond.bondId) &&
+      trait.description.includes('技力自然回复速度');
+    return evaluation.active && (hasDpsEffect || hasTraitSp);
+  }
+
+  function preferredCovenantForOperator(operator) {
+    const trait = traitMap.get(operator.id);
+    const bonds = (trait?.bondIds ?? [])
+      .map((bondId) => covenantMap.get(bondId))
+      .filter(Boolean);
+    return (
+      bonds.find((bond) => covenantImpactsOperator(bond, operator)) ??
+      bonds[0] ??
+      null
+    );
+  }
+
+  function focusOperatorCovenant(operator, force = false) {
+    const focused = focusedCovenant();
+    if (
+      !force &&
+      focused &&
+      covenantImpactsOperator(focused, operator)
+    ) {
+      return;
+    }
+    const preferred = preferredCovenantForOperator(operator);
+    if (!preferred) return;
+    if (!state.covenants.selectedIds.includes(preferred.bondId)) {
+      state.covenants.selectedIds.push(preferred.bondId);
+    }
+    state.chartCovenantId = preferred.bondId;
+    state.axis = 'covenant';
   }
 
   function combineCovenantEffects(slot, layerCap = null) {
@@ -2038,6 +2096,7 @@
   function bindSlotEvents() {
     function selectOperator(index, name) {
       const slot = state.slots[index];
+      state.activeSlot = index;
       slot.operatorName = name;
       const operator = findOperator(slot);
       slot.skillName = operator.skills[0]?.name ?? '';
@@ -2046,6 +2105,7 @@
       slot.normalHits = 1;
       slot.skillHits = 1;
       syncAuto(slot);
+      focusOperatorCovenant(operator);
       refreshSlot(index);
       renderCovenantSummary();
       renderSelectedCovenants();
@@ -2057,6 +2117,7 @@
       if (!card) return;
       const index = Number(card.dataset.slot);
       const slot = state.slots[index];
+      state.activeSlot = index;
       const field = event.target.dataset.field;
       if (!field) return;
 
@@ -2201,8 +2262,10 @@
         state.axis = 'covenant';
         state.chartCovenantId = 'skillfulShip';
       } else if (value === 'trait') {
-        state.axis = 'covenant';
-        state.chartCovenantId = 'lethaniaShip';
+        focusOperatorCovenant(
+          findOperator(state.slots[state.activeSlot] ?? state.slots[0]),
+          true,
+        );
       } else {
         state.axis = 'covenant';
       }
@@ -2599,7 +2662,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.9 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.10 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
