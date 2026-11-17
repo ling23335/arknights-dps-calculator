@@ -466,6 +466,12 @@ function evaluateAutoChessTrait(description = '', bondLayers = []) {
   const aspdMatch = text.match(
     /每叠加\s*(\d+)\s*层[^。\n]*?攻击速度\s*\+\s*(\d+(?:\.\d+)?)/,
   );
+  const rawAttackMatch = text.match(
+    /攻击力和生命上限\s*\+\s*(\d+(?:\.\d+)?)%/,
+  );
+  const flatAttackMatch = text.match(
+    /基础攻击力\s*\+\s*(\d+(?:\.\d+)?)/,
+  );
   const step = Number(
     spMatch?.[1] ?? attackMatch?.[1] ?? aspdMatch?.[1] ?? 1,
   );
@@ -475,8 +481,11 @@ function evaluateAutoChessTrait(description = '', bondLayers = []) {
     stacks,
     effects: {
       spPerSecond: stacks * Number(spMatch?.[2] ?? 0),
-      attackBonus: stacks * Number(attackMatch?.[2] ?? 0),
+      attackBonus:
+        stacks * Number(attackMatch?.[2] ?? 0) +
+        Number(rawAttackMatch?.[1] ?? 0),
       aspd: stacks * Number(aspdMatch?.[2] ?? 0),
+      flatAttack: Number(flatAttackMatch?.[1] ?? 0),
     },
   };
 }

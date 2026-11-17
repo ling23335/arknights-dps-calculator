@@ -234,7 +234,9 @@
     const hints = calc.estimateSkillHints(level?.description ?? '');
     slot.activeMultiplier = round(hints.attackMultiplier);
     slot.aspd = hints.aspd;
-    slot.intervalDelta = hints.intervalDelta;
+    slot.intervalDelta = Number.isFinite(level?.intervalDelta)
+      ? level.intervalDelta
+      : hints.intervalDelta;
     slot.duration = level?.duration ?? 0;
     slot.charges = hints.charges || 1;
     slot.chargeBased = Boolean(hints.chargeBased);
@@ -436,18 +438,37 @@
         trait: null,
         totalLayers: 0,
         stacks: 0,
-        effects: { spPerSecond: 0, attackBonus: 0, aspd: 0 },
+        effects: {
+          spPerSecond: 0,
+          attackBonus: 0,
+          aspd: 0,
+          flatAttack: 0,
+        },
       };
     }
     const selected = new Set(
       state.covenants.enabled ? state.covenants.selectedIds : [],
     );
-    const layers = trait.bondIds
-      .filter((bondId) => selected.has(bondId))
-      .map(
-        (bondId) =>
-          state.covenants.settings[bondId]?.layer ?? 0,
-      );
+    const layers = trait.bondIds.flatMap((bondId) => {
+      if (!selected.has(bondId)) return [];
+      const bondName = covenantMap.get(bondId)?.name;
+      const marker = bondName ? `【${bondName}】层数+` : '';
+      const markerIndex = marker
+        ? trait.description.indexOf(marker)
+        : -1;
+      const acquiredLayer =
+        markerIndex >= 0
+          ? Number(
+              trait.description
+                .slice(markerIndex + marker.length)
+                .match(/^\d+/)?.[0] ?? 0,
+            )
+          : 0;
+      return [
+        (state.covenants.settings[bondId]?.layer ?? 0) +
+          acquiredLayer,
+      ];
+    });
     return {
       trait,
       ...calc.evaluateAutoChessTrait(trait.description, layers),
@@ -1291,7 +1312,7 @@
         ? enemyMap.get(state.enemy.selectedId)?.hp
         : Infinity);
     const result = calc.simulateFrameDps({
-      attack: stats.attack,
+      attack: stats.attack + traitEffects.flatAttack,
       baseInterval: stats.attackInterval,
       damageType: slot.damageType,
       enemy: { ...enemy, hp: enemyHp },
@@ -1423,7 +1444,15 @@
   }
 
   function autoChessTraitSummary(info) {
-    if (!info?.trait || !info.stacks) return '';
+    if (!info?.trait) return '';
+    if (!info.stacks) {
+      const bondNames = info.trait.bondIds
+        .map((bondId) => covenantMap.get(bondId)?.name)
+        .filter(Boolean);
+      return `${info.trait.name} · 未激活${
+        bondNames.length ? `（需${bondNames.join('、')}层数）` : ''
+      }`;
+    }
     const parts = [`${info.trait.name} ${info.totalLayers} 层`];
     if (info.effects.spPerSecond) {
       parts.push(`技力回复 +${decimal.format(info.effects.spPerSecond)}/秒`);
@@ -1433,6 +1462,9 @@
     }
     if (info.effects.aspd) {
       parts.push(`攻速 +${decimal.format(info.effects.aspd)}`);
+    }
+    if (info.effects.flatAttack) {
+      parts.push(`基础攻击 +${decimal.format(info.effects.flatAttack)}`);
     }
     return parts.join(' · ');
   }
@@ -2361,7 +2393,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.6 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.7 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),

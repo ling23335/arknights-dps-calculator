@@ -139,6 +139,18 @@ test('autochess operator snapshot contains only eligible operators and the speci
     true,
   );
   assert.equal(ids.has('char_618_acrbot'), true);
+  assert.equal(operators.source.dataSource, 'local-game-tables');
+
+  const ember = operators.operators.find(
+    (operator) => operator.id === 'char_180_amgoat',
+  );
+  const ignition = ember.skills.find((skill) => skill.name === '点燃');
+  const volcano = ember.skills.find((skill) => skill.name === '火山');
+  assert.equal(ember.stats.e2.attack, 645);
+  assert.equal(ember.stats.trust.attack, 90);
+  assert.equal(ignition.levels.M3.cost, 5);
+  assert.equal(ignition.levels.M3.maxChargeTime, 3);
+  assert.equal(volcano.levels.M3.intervalDelta, -1.1);
 });
 
 test('Muelsyse conversion equipment and covenant-target equipment exist', () => {

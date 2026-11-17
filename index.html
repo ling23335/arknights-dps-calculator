@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="app-build" content="2026-11-17.6">
+  <meta name="app-build" content="2026-11-17.7">
   <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
-  <link rel="stylesheet" href="src/styles.css?v=2026-11-17.6">
+  <link rel="stylesheet" href="src/styles.css?v=2026-11-17.7">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -89,7 +89,7 @@
               <p>透明、可覆盖</p>
             </div>
           </div>
-          <p>自动读取 PRTS 的满级攻击、信赖、潜能、模组和技能参数，并从技能描述估算攻击倍率、攻击速度与间隔变化。</p>
+          <p>干员属性、信赖、潜能和技能参数直接读取本地 character_table 与 skill_table，并从技能描述和 Blackboard 推算攻击倍率、攻速、间隔、充能及技力消耗。</p>
           <details>
             <summary>查看公式与限制</summary>
             <div class="formula-list">
@@ -337,19 +337,19 @@
     </div>
 
     <footer>
-      <span>数据来源：本地游戏 V3_1 热更新（盟约、敌人） · <a href="https://prts.wiki/w/干员一览" target="_blank" rel="noreferrer">PRTS 干员一览</a></span>
+      <span>数据来源：本地游戏 V3_1 热更新（干员、技能、盟约、装备、敌人） · <a href="https://prts.wiki/w/干员一览" target="_blank" rel="noreferrer">PRTS 对照</a></span>
       <span>仅供横向比较。实际伤害受目标数量、命中丢失与特殊机制影响。</span>
     </footer>
   </div>
 
   <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
-  <script src="data/operators-autochess.js?v=2026-11-17.6"></script>
-  <script src="data/covenants.js?v=2026-11-17.6"></script>
-  <script src="data/enemies.js?v=2026-11-17.6"></script>
-  <script src="data/equipment.js?v=2026-11-17.6"></script>
-  <script src="data/commands.js?v=2026-11-17.6"></script>
-  <script src="data/autochess-traits.js?v=2026-11-17.6"></script>
-  <script src="src/calc.js?v=2026-11-17.6"></script>
-  <script src="src/app.js?v=2026-11-17.6"></script>
+  <script src="data/operators-autochess.js?v=2026-11-17.7"></script>
+  <script src="data/covenants.js?v=2026-11-17.7"></script>
+  <script src="data/enemies.js?v=2026-11-17.7"></script>
+  <script src="data/equipment.js?v=2026-11-17.7"></script>
+  <script src="data/commands.js?v=2026-11-17.7"></script>
+  <script src="data/autochess-traits.js?v=2026-11-17.7"></script>
+  <script src="src/calc.js?v=2026-11-17.7"></script>
+  <script src="src/app.js?v=2026-11-17.7"></script>
 </body>
 </html>
