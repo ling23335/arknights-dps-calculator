@@ -156,6 +156,9 @@ test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
   const followUp = estimateSkillHints(
     '下次攻击额外造成一次相当于攻击力180%的法术伤害',
   );
+  const extraAttack = estimateSkillHints(
+    '下次攻击额外攻击一个目标并造成相当于攻击力300%的法术伤害',
+  );
   const lemuen = estimateSkillHints(
     '期间攻击力从180%逐渐提升至425%',
   );
@@ -186,7 +189,14 @@ test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
     [1.4, 5],
   );
   assert.equal(pursuit.skillHits, 2);
-  assert.equal(followUp.skillHits, 2);
+  assert.deepEqual(
+    [followUp.attackMultiplier, followUp.skillHits],
+    [2.8, 1],
+  );
+  assert.deepEqual(
+    [extraAttack.attackMultiplier, extraAttack.skillHits],
+    [4, 1],
+  );
   assert.equal(lemuen.attackMultiplier, 3.025);
   assert.equal(rampedArts.attackMultiplier, 0.75);
   assert.equal(healing.attackMultiplier, 1);
@@ -357,6 +367,28 @@ test('skill attack speed does not speed up normal attacks', () => {
 
   assert.equal(result.normalDps, 1000);
   assert.equal(result.activeDps, 2000);
+});
+
+test('global attack speed affects normal attacks in frame simulation', () => {
+  const simulate = (normalAspd) =>
+    simulateFrameDps({
+      attack: 100,
+      baseInterval: 1,
+      damageType: 'true',
+      enemy: { def: 0, res: 0, hp: Infinity },
+      normalAspd,
+      activeMultiplier: 2,
+      duration: 5,
+      cooldown: 5,
+      tick: 0.1,
+      horizon: 20,
+    });
+
+  const baseline = simulate(0);
+  const accelerated = simulate(100);
+
+  assert.equal(accelerated.normalHits > baseline.normalHits, true);
+  assert.equal(accelerated.normalInterval, 0.5);
 });
 
 test('operator search resolves a partial name', () => {

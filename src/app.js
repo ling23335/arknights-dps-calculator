@@ -1500,13 +1500,13 @@
     const chargeBased = slot.chargeBased && slot.duration <= 0;
     const useSpState =
       slot.spMode === 'natural' || slot.spMode === 'attack';
-    const totalAspd =
-      slot.aspd +
+    const globalAspd =
       covenantEffects.aspd +
       referenceEffects.aspd +
       traitEffects.aspd +
       talentEffects.aspd +
       Number(talent.module?.aspd ?? 0);
+    const totalAspd = slot.aspd + globalAspd;
     const activeWindow = Math.max(0, slot.duration);
     const enemyHp =
       enemy.hp ??
@@ -1545,8 +1545,8 @@
             covenantEffects.extraDamageMultiplier +
             referenceEffects.extraDamageMultiplier +
             talentEffects.extraDamageMultiplier,
-      normalAspd: chargeBased ? totalAspd : 0,
-      aspd: chargeBased ? 0 : totalAspd,
+      normalAspd: globalAspd,
+      aspd: slot.aspd,
       intervalDelta: slot.intervalDelta,
       normalHits: slot.normalHits,
       skillHits: slot.skillHits,
@@ -2681,7 +2681,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.11 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.12 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),

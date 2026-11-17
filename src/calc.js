@@ -55,6 +55,21 @@ function estimateSkillHints(
   blackboard = {},
   maxChargeTime = 1,
 ) {
+  const numberMap = {
+    一: 1,
+    两: 2,
+    二: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9,
+    十: 10,
+  };
+  const parseCount = (value) =>
+    Number(value) || numberMap[value] || 1;
   const scalePatterns = [
     /造成[^。\n]{0,24}?相当于攻击力\s*(\d+(?:\.\d+)?)%/,
     /造成[^。\n]{0,24}?相当于\s*(\d+(?:\.\d+)?)%攻击力/,
@@ -94,11 +109,28 @@ function estimateSkillHints(
   const addBuffScale = addBuffMatch
     ? 1 + Number(addBuffMatch[1]) / 100
     : 0;
-  const attackMultiplier = Math.max(
+  let attackMultiplier = Math.max(
     directScale,
     rampMatch ? rampScale : toBuffScale,
     addBuffScale,
   );
+  const extraDamageMatch = description.match(
+    /额外(?:攻击(?:一个目标|1名敌人)[^。\n]{0,12}?并)?造成(?:([0-9一二两三四五六七八九十]+)次)?[^。\n]{0,12}?(?:相当于)?攻击力\s*(\d+(?:\.\d+)?)%/,
+  );
+  const followUpDamageMatch = description.match(
+    /追加(?:([0-9一二两三四五六七八九十]+)次)?[^。\n]{0,12}?(?:相当于)?攻击力\s*(\d+(?:\.\d+)?)%/,
+  );
+  if (extraDamageMatch) {
+    const hits = parseCount(extraDamageMatch[1] ?? '1');
+    attackMultiplier = Math.max(
+      attackMultiplier,
+      1 + hits * Number(extraDamageMatch[2]) / 100,
+    );
+  } else if (followUpDamageMatch) {
+    const hits = parseCount(followUpDamageMatch[1] ?? '1');
+    attackMultiplier +=
+      hits * Number(followUpDamageMatch[2]) / 100;
+  }
   const blackboardScaleKeys = [
     'fk',
     'attack@atk_scale',
@@ -173,21 +205,6 @@ function estimateSkillHints(
   ) {
     blackboardHits = repeatedTimes + 1;
   }
-  const numberMap = {
-    一: 1,
-    两: 2,
-    二: 2,
-    三: 3,
-    四: 4,
-    五: 5,
-    六: 6,
-    七: 7,
-    八: 8,
-    九: 9,
-    十: 10,
-  };
-  const parseCount = (value) =>
-    Number(value) || numberMap[value] || 1;
   const hitPatterns = [
     /([0-9一二两三四五六七八九十]+)连(?:击|发)/,
     /(?:连续攻击|连续射击|进行)([0-9一二两三四五六七八九十]+)次/,
@@ -199,12 +216,8 @@ function estimateSkillHints(
   const hitMatch = hitPatterns
     .map((pattern) => description.match(pattern))
     .find(Boolean);
-  const extraHitMatch = description.match(
-    /(?:额外|追加)(?:造成|攻击|射击)?([0-9一二两三四五六七八九十]+)次/,
-  );
   const skillHits = Math.max(
     hitMatch ? parseCount(hitMatch[1]) : 1,
-    extraHitMatch ? parseCount(extraHitMatch[1]) + 1 : 1,
     blackboardHits ?? 1,
   );
 
