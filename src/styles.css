@@ -589,6 +589,13 @@ body.has-maximized-module {
   font-size: 10px;
 }
 
+.slot-equipment-picker {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
 .kill-module {
   padding: 22px;
 }
@@ -2063,13 +2070,14 @@ footer {
   .skill-line,
   .module-select,
   .equipment-select,
+  .slot-equipment-picker,
   .mini-row {
     grid-column: 1;
   }
 
   .main-result {
     grid-column: 2;
-    grid-row: 1 / span 5;
+    grid-row: 1 / span 10;
     align-self: stretch;
     border-top: 0;
     padding: 6px 0 0 18px;
