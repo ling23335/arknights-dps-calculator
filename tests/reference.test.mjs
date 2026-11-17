@@ -116,12 +116,13 @@ test('ultimate enemy snapshot retains local special mechanics', () => {
   const database = JSON.parse(
     fs.readFileSync(snapshot.source.enemyDatabase, 'utf8'),
   );
-  const enriched = enrichEnemySnapshot(snapshot, database);
+  const activity = JSON.parse(
+    fs.readFileSync(snapshot.source.gameData, 'utf8'),
+  );
+  const enriched = enrichEnemySnapshot(snapshot, database, activity);
   const restored = applyUltimateEnemyStats(
     enriched,
-    JSON.parse(
-      fs.readFileSync(snapshot.source.gameData, 'utf8'),
-    ),
+    activity,
   ).enemies.find((item) => item.enemyId === enemy.enemyId);
 
   assert.equal(restored.description.includes('蒸汽甲胄'), true);
@@ -132,8 +133,19 @@ test('ultimate enemy snapshot retains local special mechanics', () => {
   assert.equal(restored.immunities.includes('FrozenImmune'), true);
   assert.equal(restored.skills.length, 2);
   assert.equal(restored.attributes.MaxHp, 600000);
+  assert.equal(restored.typeName, null);
   assert.equal(typeof restored.physicalHitRateDefined, 'boolean');
   assert.equal(typeof restored.magicalHitRateDefined, 'boolean');
+  assert.equal(
+    enriched.enemies.find((item) => item.specialType === 'CRITIC')
+      ?.typeName,
+    '特训敌人·致命',
+  );
+  assert.equal(
+    enriched.enemies.find((item) => item.specialType === 'INVISIBLE')
+      ?.typeName,
+    '特训敌人·隐匿',
+  );
 });
 
 test('autochess character traits include Ember SP recovery', () => {

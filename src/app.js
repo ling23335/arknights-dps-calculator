@@ -131,6 +131,9 @@
   const strongholdEnemySearch = document.querySelector(
     '#stronghold-enemy-search',
   );
+  const strongholdEnemyType = document.querySelector(
+    '#stronghold-enemy-type',
+  );
   const strongholdEnemySelect = document.querySelector('#stronghold-enemy');
   const strongholdEnemyProfile = document.querySelector(
     '#stronghold-enemy-profile',
@@ -1269,7 +1272,7 @@
   function enemyCategoryLabel(enemy) {
     if (enemy.category === 'boss') return '卫戍领袖';
     if (enemy.category === 'special') {
-      return `卫戍特训${enemy.specialType ? ` · ${enemy.specialType}` : ''}`;
+      return enemy.typeName || '卫戍特训 · 特殊';
     }
     return '卫戍常规敌人';
   }
@@ -1292,11 +1295,25 @@
 
   function renderStrongholdEnemyOptions() {
     const query = strongholdEnemySearch.value.trim().toLowerCase();
+    const type = strongholdEnemyType.value;
     const visible = enemies.filter(
       (enemy) =>
-        !query ||
-        enemy.name.toLowerCase().includes(query) ||
-        enemy.enemyId.toLowerCase().includes(query),
+        (type === 'all' ||
+          (type === 'boss' && enemy.category === 'boss') ||
+          (type === 'regular' && enemy.category === 'regular') ||
+          (type.startsWith('special:') &&
+            enemy.specialType === type.slice(8))) &&
+        (!query ||
+          [
+            enemy.name,
+            enemy.enemyId,
+            enemy.typeName,
+            enemy.typeDescription,
+            enemy.description,
+            ...(enemy.tags ?? []),
+          ]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(query))),
     );
     const groups = [
       ['boss', '领袖'],
@@ -1307,18 +1324,59 @@
         .filter((enemy) => enemy.category === category)
         .map(
           (enemy) =>
-            `<option value="${escapeHtml(enemy.enemyId)}">${escapeHtml(enemy.name)} · ${number.format(enemy.defense)} 防 / ${decimal.format(enemy.resistance)}% 抗</option>`,
+            `<option value="${escapeHtml(enemy.enemyId)}">${escapeHtml(enemy.name)}${enemy.typeName ? ` · ${escapeHtml(enemy.typeName)}` : ''} · ${number.format(enemy.defense)} 防 / ${decimal.format(enemy.resistance)}% 抗</option>`,
         )
         .join('');
       return rows ? `<optgroup label="${label}">${rows}</optgroup>` : '';
     });
     strongholdEnemySelect.innerHTML =
       groups.join('') || '<option value="">没有匹配敌人</option>';
-    if (enemyMap.has(state.enemy.selectedId)) {
+    if (
+      visible.some((enemy) => enemy.enemyId === state.enemy.selectedId)
+    ) {
       strongholdEnemySelect.value = state.enemy.selectedId;
     } else if (visible.length) {
-      strongholdEnemySelect.value = visible[0].enemyId;
+      const enemy = visible[0];
+      strongholdEnemySelect.value = enemy.enemyId;
+      state.enemy.selectedId = enemy.enemyId;
+      if (state.enemy.useStronghold) {
+        state.enemy.def = Math.max(0, enemy.defense);
+        state.enemy.res = Math.max(0, enemy.resistance);
+        syncEnemyInputs();
+      }
+      renderStrongholdEnemyProfile();
+      updateResults();
     }
+  }
+
+  function initEnemyTypeFilter() {
+    const types = [
+      ...new Map(
+        enemies
+          .filter((enemy) => enemy.specialType && enemy.typeName)
+          .map((enemy) => [
+            enemy.specialType,
+            {
+              id: enemy.specialType,
+              name: enemy.typeName,
+              description: enemy.typeDescription,
+              sortId: enemy.typeSortId,
+            },
+          ]),
+      ).values(),
+    ].sort((a, b) => a.sortId - b.sortId);
+    strongholdEnemyType.innerHTML = [
+      '<option value="all">全部敌人类型</option>',
+      '<option value="boss">卫戍领袖</option>',
+      '<option value="regular">卫戍常规</option>',
+      ...types.map(
+        (type) =>
+          `<option value="special:${escapeHtml(type.id)}">${escapeHtml(type.name)}</option>`,
+      ),
+    ].join('');
+    strongholdEnemyType.title = types
+      .map((type) => `${type.name}：${type.description}`)
+      .join('\n');
   }
 
   function renderStrongholdEnemyProfile() {
@@ -2581,6 +2639,10 @@
       'input',
       renderStrongholdEnemyOptions,
     );
+    strongholdEnemyType.addEventListener(
+      'change',
+      renderStrongholdEnemyOptions,
+    );
     strongholdEnemySelect.addEventListener('change', (event) => {
       state.enemy.selectedId = event.target.value;
       renderStrongholdEnemyProfile();
@@ -2660,6 +2722,7 @@
     state.axis = 'covenant';
     document.querySelector('#chart-axis').value = 'covenant';
     strongholdEnemySearch.value = '';
+    strongholdEnemyType.value = 'all';
     renderStrongholdEnemyOptions();
     syncStrongholdEnemyUI();
     resetCovenants();
@@ -2836,6 +2899,7 @@
     )
     .join('');
   buildSlots();
+  initEnemyTypeFilter();
   renderStrongholdEnemyOptions();
   syncStrongholdEnemyUI();
   renderCovenants();

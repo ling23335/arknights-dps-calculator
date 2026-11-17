@@ -27,7 +27,12 @@ function attributeValue(record, key, fallback = 0) {
   return value?.MValue ?? fallback;
 }
 
-export function enrichEnemySnapshot(snapshot, enemyDatabase) {
+export function enrichEnemySnapshot(
+  snapshot,
+  enemyDatabase,
+  activity = null,
+) {
+  const enemyTypes = activity?.AutoChessData?.EnemyTypeDatas ?? {};
   return {
     ...snapshot,
     enemies: snapshot.enemies.map((enemy) => {
@@ -48,6 +53,7 @@ export function enrichEnemySnapshot(snapshot, enemyDatabase) {
       })[0];
       const data = record?.EnemyData;
       if (!data) return enemy;
+      const typeData = enemyTypes[enemy.specialType] ?? null;
       const attributes = Object.fromEntries(
         Object.entries(data.Attributes ?? {}).map(([key, value]) => [
           key,
@@ -60,6 +66,9 @@ export function enrichEnemySnapshot(snapshot, enemyDatabase) {
       return {
         ...enemy,
         description: data.Description?.MValue ?? '',
+        typeName: typeData?.Name ?? null,
+        typeDescription: typeData?.Description ?? '',
+        typeSortId: typeData?.SortId ?? 99,
         tags: data.EnemyTags?.MValue ?? [],
         levelType: data.LevelType?.MValue ?? null,
         lifePointReduce: data.LifePointReduce?.MValue ?? 0,
@@ -209,7 +218,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
       : findFile(decodedRoot, 'activity_table071163.json');
   const activity = JSON.parse(fs.readFileSync(activityPath, 'utf8'));
   const result = applyUltimateEnemyStats(
-    enrichEnemySnapshot(snapshot, enemyDatabase),
+    enrichEnemySnapshot(snapshot, enemyDatabase, activity),
     activity,
   );
   const json = JSON.stringify(result);
