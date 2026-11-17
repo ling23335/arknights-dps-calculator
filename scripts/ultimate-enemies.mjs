@@ -22,6 +22,82 @@ function round(value) {
     : Math.round(value * 1000) / 1000;
 }
 
+function attributeValue(record, key, fallback = 0) {
+  const value = record?.EnemyData?.Attributes?.[key];
+  return value?.MValue ?? fallback;
+}
+
+export function enrichEnemySnapshot(snapshot, enemyDatabase) {
+  return {
+    ...snapshot,
+    enemies: snapshot.enemies.map((enemy) => {
+      const records =
+        enemyDatabase.Enemies?.[enemy.handbookId] ??
+        enemyDatabase.Enemies?.[enemy.enemyId] ??
+        [];
+      const record = [...records].sort((a, b) => {
+        const score = (entry) =>
+          Math.abs(attributeValue(entry, 'MaxHp') - enemy.baseHp) +
+          Math.abs(attributeValue(entry, 'Atk') - enemy.baseAttack) +
+          Math.abs(attributeValue(entry, 'Def') - enemy.baseDefense) +
+          Math.abs(
+            attributeValue(entry, 'MagicResistance') -
+              enemy.baseResistance,
+          );
+        return score(a) - score(b);
+      })[0];
+      const data = record?.EnemyData;
+      if (!data) return enemy;
+      const attributes = Object.fromEntries(
+        Object.entries(data.Attributes ?? {}).map(([key, value]) => [
+          key,
+          value?.MValue,
+        ]),
+      );
+      const immunities = Object.entries(attributes)
+        .filter(([key, value]) => key.endsWith('Immune') && value === true)
+        .map(([key]) => key);
+      return {
+        ...enemy,
+        description: data.Description?.MValue ?? '',
+        tags: data.EnemyTags?.MValue ?? [],
+        levelType: data.LevelType?.MValue ?? null,
+        lifePointReduce: data.LifePointReduce?.MValue ?? 0,
+        rangeRadius: data.RangeRadius?.MValue ?? 0,
+        attackSpeed: attributeValue(record, 'AttackSpeed', 100),
+        moveSpeed: attributeValue(record, 'MoveSpeed', 0),
+        massLevel: attributeValue(record, 'MassLevel', 0),
+        blockCount: attributeValue(record, 'BlockCnt', 0),
+        hpRecoveryPerSec: attributeValue(record, 'HpRecoveryPerSec', 0),
+        epResistance: attributeValue(record, 'EpResistance', 0),
+        epDamageResistance: attributeValue(
+          record,
+          'EpDamageResistance',
+          0,
+        ),
+        physicalHitRate: attributeValue(
+          record,
+          'DamageHitratePhysical',
+          0,
+        ),
+        physicalHitRateDefined:
+          data.Attributes?.DamageHitratePhysical?.MDefined ?? false,
+        magicalHitRate: attributeValue(
+          record,
+          'DamageHitrateMagical',
+          0,
+        ),
+        magicalHitRateDefined:
+          data.Attributes?.DamageHitrateMagical?.MDefined ?? false,
+        attributes,
+        immunities,
+        skills: data.Skills ?? [],
+        talentBlackboard: data.TalentBlackboard ?? {},
+      };
+    }),
+  };
+}
+
 export function applyUltimateEnemyStats(snapshot, activity) {
   const season =
     activity.Activity?.Autochess?.act3autochess?.[0]?.V3_1;
@@ -118,6 +194,9 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const snapshot = JSON.parse(
     fs.readFileSync(path.join(projectRoot, 'data/enemies.json'), 'utf8'),
   );
+  const enemyDatabase = JSON.parse(
+    fs.readFileSync(snapshot.source.enemyDatabase, 'utf8'),
+  );
   const covenantSource = JSON.parse(
     fs.readFileSync(path.join(projectRoot, 'data/covenants.json'), 'utf8'),
   ).source.gameData;
@@ -129,7 +208,10 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
       ? covenantSource
       : findFile(decodedRoot, 'activity_table071163.json');
   const activity = JSON.parse(fs.readFileSync(activityPath, 'utf8'));
-  const result = applyUltimateEnemyStats(snapshot, activity);
+  const result = applyUltimateEnemyStats(
+    enrichEnemySnapshot(snapshot, enemyDatabase),
+    activity,
+  );
   const json = JSON.stringify(result);
   fs.writeFileSync(path.join(projectRoot, 'data/enemies.json'), json);
   fs.writeFileSync(

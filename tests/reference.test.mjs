@@ -5,6 +5,10 @@ import {
   extractAutomaticStats,
   stripGameMarkup,
 } from '../scripts/reference-data.mjs';
+import {
+  applyUltimateEnemyStats,
+  enrichEnemySnapshot,
+} from '../scripts/ultimate-enemies.mjs';
 
 test('game rich text is reduced to readable effect text', () => {
   assert.equal(
@@ -97,6 +101,39 @@ test('ultimate enemy snapshot applies the exact V3_1 mode factors', () => {
   assert.equal(enemy.defense, 4500);
   assert.equal(enemy.resistance, 75);
   assert.equal(enemy.baseDefense, 1000);
+});
+
+test('ultimate enemy snapshot retains local special mechanics', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/enemies.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const enemy = snapshot.enemies.find(
+    (item) => item.enemyId === 'enemy_9013_acstmk',
+  );
+  const database = JSON.parse(
+    fs.readFileSync(snapshot.source.enemyDatabase, 'utf8'),
+  );
+  const enriched = enrichEnemySnapshot(snapshot, database);
+  const restored = applyUltimateEnemyStats(
+    enriched,
+    JSON.parse(
+      fs.readFileSync(snapshot.source.gameData, 'utf8'),
+    ),
+  ).enemies.find((item) => item.enemyId === enemy.enemyId);
+
+  assert.equal(restored.description.includes('蒸汽甲胄'), true);
+  assert.equal(restored.tags.includes('machine'), true);
+  assert.equal(restored.massLevel, 10);
+  assert.equal(restored.moveSpeed, 0.1);
+  assert.equal(restored.immunities.includes('StunImmune'), true);
+  assert.equal(restored.immunities.includes('FrozenImmune'), true);
+  assert.equal(restored.skills.length, 2);
+  assert.equal(restored.attributes.MaxHp, 600000);
+  assert.equal(typeof restored.physicalHitRateDefined, 'boolean');
+  assert.equal(typeof restored.magicalHitRateDefined, 'boolean');
 });
 
 test('autochess character traits include Ember SP recovery', () => {

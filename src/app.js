@@ -156,10 +156,11 @@
   }
 
   function findOperator(slot) {
-    return operatorMap.get(slot.operatorName) ?? operators[0];
+    return operatorMap.get(slot.operatorName) ?? null;
   }
 
   function findSkill(slot, operator = findOperator(slot)) {
+    if (!operator) return null;
     return (
       operator.skills.find((skill) => skill.name === slot.skillName) ??
       operator.skills[0] ??
@@ -180,12 +181,14 @@
     };
   }
 
-  function createSlot(operatorName, skillName) {
-    const operator = operatorMap.get(operatorName) ?? operators[0];
+  function createSlot(operatorName = '', skillName = '') {
+    const operator = operatorMap.get(operatorName) ?? null;
     const skill =
-      operator.skills.find((item) => item.name === skillName) ?? operator.skills[0];
+      operator?.skills.find((item) => item.name === skillName) ??
+      operator?.skills[0] ??
+      null;
     const slot = {
-      operatorName: operator.name,
+      operatorName: operator?.name ?? '',
       skillName: skill?.name ?? '',
       level: 'M3',
       support: true,
@@ -210,7 +213,7 @@
       skillHits: 1,
       defenseIgnore: 0,
       resistanceIgnore: 0,
-      damageType: 'physical',
+      damageType: '',
     };
     syncAuto(slot);
     return slot;
@@ -218,6 +221,23 @@
 
   function syncAuto(slot) {
     const operator = findOperator(slot);
+    if (!operator) {
+      slot.operatorName = '';
+      slot.skillName = '';
+      slot.activeMultiplier = 1;
+      slot.aspd = 0;
+      slot.intervalDelta = 0;
+      slot.duration = 0;
+      slot.cooldown = 0;
+      slot.charges = 1;
+      slot.chargeBased = false;
+      slot.skillHits = 1;
+      slot.spCost = 0;
+      slot.spInitial = 0;
+      slot.spMode = 'natural';
+      slot.damageType = '';
+      return;
+    }
     slot.operatorName = operator.name;
     if (!operator.skills.some((skill) => skill.name === slot.skillName)) {
       slot.skillName = operator.skills[0]?.name ?? '';
@@ -299,10 +319,14 @@
         .join('');
       return rows ? `<optgroup label="${rarity}★">${rows}</optgroup>` : '';
     });
-    return groups.join('');
+    return [
+      `<option value=""${selected ? '' : ' selected'}>选择干员</option>`,
+      ...groups,
+    ].join('');
   }
 
   function levelOptions(skill, selected) {
+    if (!skill) return '<option value="">—</option>';
     return levelOrder
       .filter((level) => skill?.levels?.[level])
       .map(
@@ -313,6 +337,7 @@
   }
 
   function skillOptions(operator, selected) {
+    if (!operator) return '<option value="">先选择干员</option>';
     return operator.skills
       .map(
         (skill, index) =>
@@ -324,6 +349,7 @@
   }
 
   function moduleOptions(operator, selected) {
+    if (!operator) return '<option value="">先选择干员</option>';
     return [
       '<option value="">无模组</option>',
       ...operator.modules.map(
@@ -449,8 +475,8 @@
 
   function combineAutoChessTrait(slot) {
     const operator = findOperator(slot);
-    const trait = traitMap.get(operator.id);
-    if (!trait) {
+    const trait = operator ? traitMap.get(operator.id) : null;
+    if (!operator || !trait) {
       return {
         trait: null,
         totalLayers: 0,
@@ -623,6 +649,7 @@
   }
 
   function bondMatchesOperator(bond, operator) {
+    if (!operator) return false;
     if (bond.bondId === 'skillfulShip' && state.skillfulAura) {
       return true;
     }
@@ -888,6 +915,14 @@
   function renderCovenantSummary() {
     const slots = state.slots.map((slot, index) => {
       const operator = findOperator(slot);
+      if (!operator) {
+        return `
+          <article class="covenant-applicant" style="--slot-color:${colorList[index].line}">
+            <span>方案 ${String.fromCharCode(65 + index)}</span>
+            <strong>未选择干员</strong>
+            <p>选择干员后显示适用盟约。</p>
+          </article>`;
+      }
       const combined = combineCovenantEffects(slot);
       const chips = effectChips(combined.effects);
       return `
@@ -965,7 +1000,9 @@
               state.covenants.settings[bond.bondId]?.layer ?? 0;
             const isFocused = bond.bondId === focused?.bondId;
             const matchedSlots = state.slots.flatMap((slot, index) =>
-              bondMatchesOperator(bond, findOperator(slot)) ? [index] : [],
+              bondMatchesOperator(bond, findOperator(slot))
+                ? [index]
+                : [],
             );
             return `
               <article class="chart-covenant-row ${isFocused ? 'focused' : ''}">
@@ -1237,6 +1274,22 @@
     return '卫戍常规敌人';
   }
 
+  function enemyMechanicLabel(key) {
+    return {
+      AttractImmune: '牵引免疫',
+      DisarmedCombatImmune: '缴械免疫',
+      FearedImmune: '恐惧免疫',
+      FrozenImmune: '冻结免疫',
+      GroundBoundImmune: '落地免疫',
+      LevitateImmune: '浮空免疫',
+      PalsyImmune: '麻痹免疫',
+      SilenceImmune: '沉默免疫',
+      SleepImmune: '睡眠免疫',
+      StunImmune: '眩晕免疫',
+      TeleportImmune: '传送免疫',
+    }[key] ?? key;
+  }
+
   function renderStrongholdEnemyOptions() {
     const query = strongholdEnemySearch.value.trim().toLowerCase();
     const visible = enemies.filter(
@@ -1280,9 +1333,40 @@
       <div>
         <i>生命 ${number.format(enemy.hp ?? 0)}</i>
         <i>攻击 ${number.format(enemy.attack ?? 0)}</i>
-        <i>防御 ${number.format(enemy.defense)}</i>
-        <i>法抗 ${decimal.format(enemy.resistance)}%</i>
+        <i>防御（物理端） ${number.format(enemy.defense)}</i>
+        <i>法术抗性 ${decimal.format(enemy.resistance)}%</i>
+        <i>攻击间隔 ${decimal.format(enemy.attackInterval ?? 0)}s</i>
+        <i>移动速度 ${decimal.format(enemy.moveSpeed ?? 0)}</i>
+        <i>重量等级 ${number.format(enemy.massLevel ?? 0)}</i>
+        <i>生命损失 ${number.format(enemy.lifePointReduce ?? 0)}</i>
       </div>
+      <details class="enemy-factor-details">
+        <summary>特殊机制与本地敌人数据</summary>
+        <p>${escapeHtml(enemy.description || '该敌人没有简介数据。')}</p>
+        <p>标签：${escapeHtml((enemy.tags ?? []).join(' / ') || '无')}</p>
+        <p>状态免疫：${escapeHtml(
+          (enemy.immunities ?? []).map(enemyMechanicLabel).join('、') ||
+            '基础数据未列出',
+        )}</p>
+        <p>技能数：${enemy.skills?.length ?? 0} · 每秒自回复：${decimal.format(
+          enemy.hpRecoveryPerSec ?? 0,
+        )} · 元素抗性：${decimal.format(enemy.epResistance ?? 0)} · 元素损伤抗性：${decimal.format(enemy.epDamageResistance ?? 0)}</p>
+        ${
+          enemy.physicalHitRateDefined || enemy.magicalHitRateDefined
+            ? `<p>命中率参数：物理 ${decimal.format(enemy.physicalHitRate ?? 0)} · 法术 ${decimal.format(enemy.magicalHitRate ?? 0)}</p>`
+            : ''
+        }
+        <pre>${escapeHtml(
+          JSON.stringify(
+            {
+              skills: enemy.skills ?? [],
+              talentBlackboard: enemy.talentBlackboard ?? {},
+            },
+            null,
+            2,
+          ),
+        )}</pre>
+      </details>
       <details class="enemy-factor-details">
         <summary>终极数值来源</summary>
         <p>模式生命/攻击/防御 ×${enemy.ultimate?.modeFactor ?? 1}；攻击 ×${enemy.ultimate?.attackFactor ?? 1}；防御 ×${enemy.ultimate?.defenseFactor ?? 1}；法抗 ×${enemy.ultimate?.resistanceFactor ?? 1}。${enemy.ultimate?.hpSource === 'boss blood table' ? '领袖生命取游戏终极血量表。' : '生命按模式倍率计算。'}</p>
@@ -1333,7 +1417,7 @@
       <article class="slot-card" data-slot="${index}" style="--slot-color:${color.line};--slot-glow:${color.glow}">
         <div class="slot-top">
           <span class="slot-label"><i class="slot-dot"></i> 方案 ${String.fromCharCode(65 + index)}</span>
-          <span class="damage-pill" data-role="damage-type">${damageTypes[slot.damageType]}</span>
+          <span class="damage-pill" data-role="damage-type">${damageTypes[slot.damageType] ?? '未选择'}</span>
         </div>
         <label class="operator-search">
           <span aria-hidden="true">⌕</span>
@@ -1424,8 +1508,10 @@
     const card = slotsElement.querySelector(`[data-slot="${index}"]`);
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
-    card.querySelector('[data-field="operatorName"]').value = operator.name;
-    card.querySelector('[data-field="operatorSearch"]').value = operator.name;
+    card.querySelector('[data-field="operatorName"]').value =
+      operator?.name ?? '';
+    card.querySelector('[data-field="operatorSearch"]').value =
+      operator?.name ?? '';
     card.querySelector('[data-field="skillName"]').innerHTML = skillOptions(
       operator,
       skill?.name,
@@ -1449,7 +1535,7 @@
     }
     const level = findLevel(slot, skill);
     card.querySelector('[data-role="description"]').textContent =
-      level?.description || operator.trait;
+      level?.description || operator?.trait || '搜索或选择干员后开始计算';
     card.querySelector('[data-role="skill-id"]').textContent =
       `${skill?.skillId || '无技能 ID'} · MaxChargeTime ${level?.maxChargeTime ?? 1}`;
     card.querySelector('[data-role="skill-template"]').textContent =
@@ -1460,7 +1546,7 @@
         ? JSON.stringify(blackboard, null, 2)
         : '该技能等级没有 Blackboard 参数';
     card.querySelector('[data-role="damage-type"]').textContent =
-      damageTypes[slot.damageType] ?? slot.damageType;
+      damageTypes[slot.damageType] ?? '未选择';
   }
 
   function buildSlots() {
@@ -1478,6 +1564,7 @@
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
     const level = findLevel(slot, skill);
+    if (!operator || !skill) return null;
     const stats = calc.resolveOperatorStats(operator, {
       trust: slot.trust,
       potential: slot.potential,
@@ -1754,7 +1841,10 @@
     const results =
       lastResults.length > 0
         ? lastResults
-        : state.slots.map((slot) => calculateSlot(slot));
+        : state.slots.flatMap((slot, slotIndex) => {
+            const result = calculateSlot(slot);
+            return result ? [{ ...result, slotIndex }] : [];
+          });
     const timeInput = document.querySelector('#kill-time-limit');
     if (document.activeElement !== timeInput) timeInput.value = limit;
     document.querySelector('#kill-target-name').textContent =
@@ -1767,15 +1857,17 @@
         <span>生命<br><b>${number.format(enemy.hp)}</b></span>
         <span>攻击<br><b>${number.format(enemy.attack)}</b></span>
         <span>防御<br><b>${number.format(enemy.defense)}</b></span>
-        <span>法抗<br><b>${decimal.format(enemy.resistance)}%</b></span>`
+        <span>法抗<br><b>${decimal.format(enemy.resistance)}%</b></span>
+        <span>攻击间隔<br><b>${decimal.format(enemy.attackInterval ?? 0)}s</b></span>
+        <span>重量<br><b>${number.format(enemy.massLevel ?? 0)}</b></span>`
       : '<span>暂无目标数据</span>';
     const requiredDps = enemy ? enemy.hp / limit : Infinity;
     document.querySelector('#kill-required-dps').textContent =
       Number.isFinite(requiredDps)
         ? number.format(Math.ceil(requiredDps))
         : '—';
-    document.querySelector('#kill-results').innerHTML = results
-      .map((item, index) => {
+    document.querySelector('#kill-results').innerHTML = results.length
+      ? results.map((item) => {
         const dps = item.result.cycleDps;
         const estimatedKill =
           item.result.killTime ??
@@ -1787,9 +1879,9 @@
             : formatKillDuration(item.result.killTime);
         const gap = Math.max(0, requiredDps - dps);
         return `
-          <article class="kill-result-card ${met ? 'met' : ''}" style="--slot-color:${colorList[index].line}">
+          <article class="kill-result-card ${met ? 'met' : ''}" style="--slot-color:${colorList[item.slotIndex].line}">
             <header>
-              <span>方案 ${String.fromCharCode(65 + index)}</span>
+              <span>方案 ${String.fromCharCode(65 + item.slotIndex)}</span>
               <span>${met ? '限定时间内可击杀' : '未达到限定 DPS'}</span>
             </header>
             <h3>${escapeHtml(item.operator.name)} · ${escapeHtml(item.skill?.name ?? '仅普攻')}</h3>
@@ -1801,31 +1893,51 @@
             </dl>
             <strong>${met ? '达标' : `低于最低线 ${number.format(Math.ceil(gap))} DPS`}</strong>
           </article>`;
-      })
-      .join('');
+      }).join('')
+      : '<p class="reference-empty">请先选择至少一名干员。</p>';
   }
 
   function updateResults() {
-    const results = state.slots.map((slot) => ({
-      ...calculateSlot(slot),
-      equipmentBase: calculateSlot({
-        ...slot,
-        conversionEquipmentId: '',
-      }),
-    }));
+    const results = state.slots.flatMap((slot, slotIndex) => {
+      const result = calculateSlot(slot);
+      if (!result) return [];
+      return [
+        {
+          ...result,
+          slotIndex,
+          equipmentBase: calculateSlot({
+            ...slot,
+            conversionEquipmentId: '',
+          }),
+        },
+      ];
+    });
     lastResults = results;
-    document.querySelector('#chart-metrics').innerHTML = results
+    document.querySelector('#chart-metrics').innerHTML = state.slots
       .map(
-        (item, index) => `
+        (slot, index) => {
+          const item = results.find((entry) => entry.slotIndex === index);
+          if (!item) {
+            return `
+              <article class="chart-metric" style="--metric-color:${colorList[index].line}">
+                <span>方案 ${String.fromCharCode(65 + index)}</span>
+                <strong>—</strong>
+                <small>请选择干员与技能</small>
+              </article>`;
+          }
+          return `
           <article class="chart-metric" style="--metric-color:${colorList[index].line}">
             <span>方案 ${String.fromCharCode(65 + index)} · ${escapeHtml(item.operator.name)}</span>
             <strong>${number.format(item.result.cycleDps)}</strong>
             <small>${escapeHtml(item.skill?.name ?? '仅普攻')} · 普攻 ${item.result.normalHits} / 技能 ${item.result.skillHits} 次</small>
-          </article>`,
+          </article>`;
+        },
       )
       .join('');
-    results.forEach((item, index) => {
-      const card = slotsElement.querySelector(`[data-slot="${index}"]`);
+    results.forEach((item) => {
+      const card = slotsElement.querySelector(
+        `[data-slot="${item.slotIndex}"]`,
+      );
       card.querySelector('[data-role="cycle"]').textContent = number.format(
         item.result.cycleDps,
       );
@@ -1867,10 +1979,10 @@
     });
 
     document.querySelector('#result-body').innerHTML = results
-      .map((item, index) => {
+      .map((item) => {
         const uptime = item.result.skillUptime * 100;
         return `
-          <tr style="--row-color:${colorList[index].line}">
+          <tr style="--row-color:${colorList[item.slotIndex].line}">
             <td>
               <span class="table-name">
                 <i></i>
@@ -1952,15 +2064,25 @@
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const xs = chartSamples();
-    const series = state.slots.map((slot) => ({
-      name: `${findOperator(slot).name} · ${findSkill(slot)?.name ?? '普攻'}`,
-      values: xs.map((value) =>
-        covenantAxis
-          ? calculateSlot(slot, state.enemy, value)
-          : calculateSlot(slot, { ...state.enemy, [state.axis]: value }),
-      ),
-      color: colorList[state.slots.indexOf(slot)].line,
-    }));
+    const series = state.slots.flatMap((slot, index) => {
+      const operator = findOperator(slot);
+      const skill = findSkill(slot, operator);
+      if (!operator || !skill) return [];
+      return [
+        {
+          name: `${operator.name} · ${skill.name}`,
+          values: xs.map((value) =>
+            covenantAxis
+              ? calculateSlot(slot, state.enemy, value)
+              : calculateSlot(slot, {
+                  ...state.enemy,
+                  [state.axis]: value,
+                }),
+          ),
+          color: colorList[index].line,
+        },
+      ];
+    });
     const maxValue = Math.max(
       1,
       ...series.flatMap((item) =>
@@ -1976,6 +2098,27 @@
     ctx.clearRect(0, 0, width, height);
     ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
     ctx.textBaseline = 'middle';
+    if (!series.length) {
+      ctx.fillStyle = '#7f91a8';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        '选择干员与技能后显示 DPS 曲线',
+        width / 2,
+        height / 2,
+      );
+      document.querySelector('#chart-legend').innerHTML = '';
+      chartModel = {
+        xs,
+        series,
+        margin,
+        plotWidth,
+        width,
+        height,
+        xToPixel: () => margin.left,
+        yToPixel: () => margin.top,
+      };
+      return;
+    }
     for (let line = 0; line <= 5; line += 1) {
       const y = margin.top + (plotHeight * line) / 5;
       ctx.strokeStyle = line === 5 ? '#3b4960' : 'rgba(121, 143, 170, .16)';
@@ -2116,15 +2259,15 @@
     function selectOperator(index, name) {
       const slot = state.slots[index];
       state.activeSlot = index;
-      slot.operatorName = name;
-      const operator = findOperator(slot);
-      slot.skillName = operator.skills[0]?.name ?? '';
+      const operator = operatorMap.get(name) ?? null;
+      slot.operatorName = operator?.name ?? '';
+      slot.skillName = operator?.skills[0]?.name ?? '';
       slot.level = 'M3';
       slot.module = '';
       slot.normalHits = 1;
       slot.skillHits = 1;
       syncAuto(slot);
-      focusOperatorCovenant(operator);
+      if (operator) focusOperatorCovenant(operator);
       refreshSlot(index);
       renderCovenantSummary();
       renderSelectedCovenants();
@@ -2150,7 +2293,7 @@
         if (match) {
           selectOperator(index, match);
         } else {
-          event.target.value = findOperator(slot).name;
+          event.target.value = findOperator(slot)?.name ?? '';
           event.target.setAttribute('aria-invalid', 'true');
           setTimeout(
             () => event.target.removeAttribute('aria-invalid'),
@@ -2524,11 +2667,7 @@
     state.commands.enabled = false;
     state.commands.selectedIds = [];
     state.killLimit = 5;
-    state.slots = [
-      createSlot('艾雅法拉', '点燃'),
-      createSlot('艾雅法拉', '火山'),
-      createSlot('逻各斯', '延异视阈'),
-    ];
+    state.slots = [createSlot(), createSlot(), createSlot()];
     buildSlots();
     renderCovenants();
     renderReferences();
@@ -2574,9 +2713,10 @@
         '无视法抗',
         '卫戍协议启用',
       ],
-      ...state.slots.map((slot) => {
+      ...state.slots.flatMap((slot) => {
         const item = calculateSlot(slot);
-        return [
+        if (!item) return [];
+        return [[
           item.operator.name,
           item.skill?.name ?? '',
           slot.level,
@@ -2612,7 +2752,7 @@
           item.covenant.effects.defensePenetration,
           item.covenant.effects.resistancePenetration,
           state.covenants.enabled ? '是' : '否',
-        ];
+        ]];
       }),
     ];
     const text =
@@ -2681,11 +2821,11 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.12 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.13 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
-    createSlot('艾雅法拉', '点燃'),
-    createSlot('艾雅法拉', '火山'),
-    createSlot('逻各斯', '延异视阈'),
+    createSlot(),
+    createSlot(),
+    createSlot(),
   ];
   operatorSearchList.innerHTML = operators
     .map(

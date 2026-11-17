@@ -955,6 +955,19 @@ input[type="search"]:focus {
   line-height: 1.5;
 }
 
+.enemy-factor-details pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 7px 0 0;
+  padding: 8px;
+  border: 1px solid rgba(129, 153, 181, .16);
+  border-radius: 8px;
+  background: rgba(5, 10, 16, .48);
+  font-family: "Cascadia Code", Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .ghost-button,
 .primary-button {
   border-radius: 10px;
