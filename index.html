@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <div class="app-shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow"><span class="pulse"></span> STRONGHOLD PROTOCOL / COVENANT</p>
+        <h1>PRTS <em>Alliance</em> Lab</h1>
+        <p class="lede">以本地游戏数据推算盟约层数、装备与指令修正，再带入干员 DPS 对比。</p>
+      </div>
+      <div class="data-stamp">
+        <span>本地盟约数据</span>
+        <strong id="covenant-count">读取中</strong>
+        <small id="data-date">V3_1</small>
+      </div>
+    </header>
+
+    <nav id="document-nav" class="document-nav" aria-label="页面目录">
+      <span class="document-nav-label">文档目录</span>
+      <a href="#chart-section">战况图</a>
+      <a href="#covenant-panel">卫戍盟约</a>
+      <a href="#equipment-section">装备</a>
+      <a href="#command-section">指令</a>
+      <a href="#enemy-section">敌人</a>
+      <a href="#dps-section">DPS 对比</a>
+    </nav>
+
+    <div class="workspace">
+      <aside class="sidebar">
+        <section id="enemy-section" class="panel controls-panel">
+          <div class="section-title">
+            <span>01</span>
+            <div>
+              <h2>敌人参数</h2>
+              <p>所有对比槽位共享</p>
+            </div>
+          </div>
+
+          <label class="stronghold-enemy-toggle">
+            <span>
+              <b>使用终极模拟敌人</b>
+              <small>已应用终极模式、攻击、防御与法抗倍率</small>
+            </span>
+            <input id="stronghold-enemy-enabled" type="checkbox" checked>
+          </label>
+          <div id="stronghold-enemy-panel" class="stronghold-enemy-panel">
+            <input id="stronghold-enemy-search" type="search" placeholder="搜索卫戍敌人">
+            <select id="stronghold-enemy" aria-label="卫戍协议敌人"></select>
+            <div id="stronghold-enemy-profile" class="enemy-profile"></div>
+          </div>
+
+          <label class="control">
+            <span class="control-head">
+              <span>防御力</span>
+              <output id="def-output">4500</output>
+            </span>
+            <input id="enemy-def" type="range" min="0" max="20000" step="10" value="4500">
+          </label>
+
+          <label class="control">
+            <span class="control-head">
+              <span>法术抗性</span>
+              <output id="res-output">75%</output>
+            </span>
+            <input id="enemy-res" type="range" min="0" max="100" step="1" value="75">
+          </label>
+
+          <label class="control select-control">
+            <span class="control-head">
+              <span>曲线横轴</span>
+            </span>
+            <select id="chart-axis">
+              <option value="covenant" selected>随盟约效果提升</option>
+              <option value="def">随防御力变化</option>
+              <option value="res">随法术抗性变化</option>
+            </select>
+          </label>
+
+          <button id="reset" class="ghost-button" type="button">恢复示例配置</button>
+        </section>
+
+        <section class="panel note-panel">
+          <div class="section-title compact">
+            <span>02</span>
+            <div>
+              <h2>计算口径</h2>
+              <p>透明、可覆盖</p>
+            </div>
+          </div>
+          <p>自动读取 PRTS 的满级攻击、信赖、潜能、模组和技能参数，并从技能描述估算攻击倍率、攻击速度与间隔变化。</p>
+          <details>
+            <summary>查看公式与限制</summary>
+            <div class="formula-list">
+              <p><b>物理</b> max(攻击 - 防御, 攻击 × 5%)</p>
+              <p><b>法术</b> 攻击 × (1 - 法抗)，最低保留 5%</p>
+              <p><b>逐帧</b> 以 1/60 秒为步长推进攻击、技能持续和回转，按实际命中事件累计伤害与击杀时间。</p>
+              <p><b>终极敌人</b> 应用终极模拟模式倍率；领袖生命取本地游戏终极血量表，不使用基础敌人面板。</p>
+              <p><b>盟约</b> 数据来自本地热更新；干员只自动应用其实际所属且达到激活人数的盟约。</p>
+              <p>召唤物、随机目标、多段命中和特殊状态无法由文本稳定推断，使用“高级参数”手动覆盖。</p>
+            </div>
+          </details>
+        </section>
+      </aside>
+
+      <main>
+        <section id="chart-section" class="module panel chart-panel" data-module="chart">
+          <div class="chart-head">
+            <div>
+              <p class="eyebrow">FRAME-BY-FRAME ULTIMATE</p>
+              <h2 id="chart-title">逐帧平均 DPS · 随盟约效果提升</h2>
+            </div>
+            <div class="chart-head-right">
+              <div id="chart-summary" class="chart-summary">等待计算</div>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div class="chart-wrap">
+              <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约效果提升的曲线"></canvas>
+              <div id="tooltip" class="tooltip" hidden></div>
+            </div>
+            <div id="chart-legend" class="chart-legend"></div>
+          </div>
+        </section>
+
+        <section id="covenant-panel" class="module panel covenant-workspace" data-module="covenant">
+          <div class="covenant-workspace-head">
+            <div>
+              <p class="eyebrow">COVENANT WORKBENCH</p>
+              <h2>卫戍协议 · 盟约推演</h2>
+              <p>全部 26 条盟约均可配置层数与激活人数，并自动带入下方干员对比。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="covenant-master">
+                <span>启用盟约计算</span>
+                <input id="covenants-enabled" type="checkbox">
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="covenant-summary" class="covenant-summary"></div>
+            <div class="covenant-workbench">
+              <section class="covenant-library">
+                <div class="covenant-tools">
+                  <input id="covenant-search" type="search" placeholder="搜索盟约或成员干员">
+                  <select id="covenant-filter" aria-label="盟约分类">
+                    <option value="all">全部盟约</option>
+                    <option value="2">核心盟约</option>
+                    <option value="1">附加与特殊盟约</option>
+                  </select>
+                </div>
+                <div id="covenant-list" class="covenant-list"></div>
+              </section>
+              <section class="covenant-selected">
+                <div class="covenant-selected-head">
+                  <div>
+                    <span>当前模拟</span>
+                    <h3>已选盟约</h3>
+                  </div>
+                  <strong id="selected-count">0 / 26</strong>
+                </div>
+                <div id="covenant-selected-list" class="covenant-selected-list"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="equipment-section" class="module panel reference-module" data-module="equipment">
+          <div class="reference-head">
+            <div>
+              <p class="eyebrow">EQUIPMENT INDEX</p>
+              <h2>卫戍协议 · 装备效果</h2>
+              <p>按本地 V3_1 数据检索装备；可配置到方案 A/B/C。攻击力、攻速、穿透与技力消耗会进入 DPS。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="reference-master">
+                <span>启用装备修正</span>
+                <input id="equipment-enabled" type="checkbox" checked>
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="equipment-summary" class="reference-summary"></div>
+            <div class="reference-tools">
+              <input id="equipment-search" type="search" placeholder="搜索装备名、盟约或效果文本">
+              <select id="equipment-filter" aria-label="装备盟约筛选">
+                <option value="all">全部装备</option>
+              </select>
+              <span id="equipment-count" class="reference-count"></span>
+            </div>
+            <div id="equipment-list" class="reference-list"></div>
+          </div>
+        </section>
+
+        <section id="command-section" class="module panel reference-module" data-module="command">
+          <div class="reference-head">
+            <div>
+              <p class="eyebrow">COMMAND INDEX</p>
+              <h2>卫戍协议 · 指令效果</h2>
+              <p>被动协议与主动指令均收录；勾选后，可识别的常驻数值修正会应用到三个方案。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="reference-master">
+                <span>启用指令修正</span>
+                <input id="commands-enabled" type="checkbox">
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="command-summary" class="reference-summary"></div>
+            <div class="reference-tools">
+              <input id="command-search" type="search" placeholder="搜索指令名、分队或效果文本">
+              <select id="command-filter" aria-label="指令类型筛选">
+                <option value="all">全部类型</option>
+                <option value="1">被动协议</option>
+                <option value="2">主动指令</option>
+                <option value="0">未解锁指令</option>
+              </select>
+              <span id="command-count" class="reference-count"></span>
+            </div>
+            <div id="command-list" class="reference-list"></div>
+          </div>
+        </section>
+
+        <section id="dps-section" class="module dps-module" data-module="dps">
+          <div class="comparison-head">
+            <div>
+              <p class="eyebrow">COMPARISON BOARD</p>
+              <h2>三路输出对比</h2>
+              <p>先选干员与技能，再按需要校准技能参数。</p>
+            </div>
+            <div class="comparison-actions">
+              <button id="export" class="primary-button" type="button">导出当前结果 CSV</button>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <section id="slots" class="slots" aria-label="干员技能对比设置"></section>
+            <datalist id="operator-search-list"></datalist>
+
+            <section class="panel result-panel">
+              <div class="section-title">
+                <span>03</span>
+                <div>
+                  <h2>结果明细</h2>
+                  <p>技能期与完整周期分开看</p>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>方案</th>
+                      <th>攻击力</th>
+                      <th>普攻 DPS</th>
+                      <th>技能 DPS</th>
+                      <th>逐帧 DPS</th>
+                      <th>击杀时间</th>
+                      <th>攻击间隔</th>
+                      <th>卫戍加成</th>
+                      <th>装备 / 指令</th>
+                      <th>技能占比</th>
+                    </tr>
+                  </thead>
+                  <tbody id="result-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <span>数据来源：本地游戏 V3_1 热更新（盟约、敌人） · <a href="https://prts.wiki/w/干员一览" target="_blank" rel="noreferrer">PRTS 干员一览</a></span>
+      <span>仅供横向比较。实际伤害受目标数量、命中丢失与特殊机制影响。</span>
+    </footer>
+  </div>
+
+  <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
+  <script src="data/operators.js"></script>
+  <script src="data/covenants.js"></script>
+  <script src="data/enemies.js"></script>
+  <script src="data/equipment.js"></script>
+  <script src="data/commands.js"></script>
+  <script src="src/calc.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
