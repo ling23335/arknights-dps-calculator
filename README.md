@@ -30,12 +30,13 @@ http://电脑IPv4地址:4173/
 
 ## 功能
 
-- 从 470 个已抓取干员中任选三名，比较普攻、技能期和周期 DPS。
+- 从本期卫戍协议实际可出现的 143 名干员中任选三名，比较普攻、技能期和周期 DPS，并包含森蚺指令特殊干员“暴躁铁皮”。
 - 每个方案都支持按干员名称搜索，输入片段后也可自动匹配。
 - 支持满信赖、潜能、模组、技能等级、敌人防御与法抗。
 - 完整收录当前 26 条盟约，可按名称或成员干员搜索，并配置层数、激活人数。
 - 收录本地 V3_1 的 116 件装备与 74 条指令/协议，可按名称、盟约、类型和效果文本搜索。
 - 装备可配置到方案 A/B/C；指令可逐条启用，常驻攻击、攻速、穿透和技力消耗参数会进入 DPS。
+- 每个方案可配置“变形同构体”的配套装备，显示仅装备 DPS 与转盟约后的 DPS；目标盟约仍需处于已选激活状态。
 - 自动识别干员所属盟约，只把实际命中且达到激活人数的效果带入 DPS。
 - 所有盟约均展示游戏内效果描述和原始 Blackboard 参数；经济、召唤和特殊机制同样可查。
 - 战况图、盟约、装备、指令和 DPS 模块都可以收起、展开或放大到全屏。
@@ -60,6 +61,8 @@ http://电脑IPv4地址:4173/
 
 - `data/operators.json`：可读 JSON 数据。
 - `data/operators.js`：供直接打开网页时加载的数据副本。
+- `data/operators-autochess.json`：筛出的 143 名本期卫戍干员及特殊干员。
+- `data/operators-autochess.js`：供直接打开网页时加载的卫戍干员副本。
 - `data/covenants.json`：本地解包整理后的 26 条盟约数据。
 - `data/covenants.js`：供直接打开网页时加载的盟约数据副本。
 - `data/enemies.json`：本地解包整理后的卫戍协议敌人属性。
@@ -79,9 +82,10 @@ npm run refresh
 npm run extract:reference
 npm run extract:ultimate
 npm run extract:traits
+npm run filter:operators
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`filter:operators` 生成仅供本页使用的 143 名卫戍干员快照。写文件前会校验数量和必填文本。
 
 ## 验证
 

@@ -116,3 +116,46 @@ test('autochess character traits include Ember SP recovery', () => {
   assert.equal(ember.bondIds.includes('arcaneShip'), true);
   assert.equal(ember.description.includes('技力自然回复速度+0.02/秒'), true);
 });
+
+test('autochess operator snapshot contains only eligible operators and the special operator', () => {
+  const operators = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/operators-autochess.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const traits = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/autochess-traits.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const ids = new Set(operators.operators.map((operator) => operator.id));
+
+  assert.equal(operators.operatorCount, operators.operators.length);
+  assert.equal(operators.operatorCount, 143);
+  assert.equal(
+    traits.traits.every((trait) => ids.has(trait.charId)),
+    true,
+  );
+  assert.equal(ids.has('char_618_acrbot'), true);
+});
+
+test('Muelsyse conversion equipment and covenant-target equipment exist', () => {
+  const equipment = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/equipment.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const converter = equipment.equipment.find(
+    (item) => item.id === 'chess_item_6_03_e_a',
+  );
+  const target = equipment.equipment.find(
+    (item) => item.name === '炎国短刀',
+  );
+
+  assert.equal(converter.name, '变形同构体');
+  assert.equal(converter.description.includes('携带者获得额外盟约'), true);
+  assert.equal(target.bondId, 'yanShip');
+});

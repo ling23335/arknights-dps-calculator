@@ -182,6 +182,7 @@
       potential: 6,
       module: '',
       equipmentId: '',
+      conversionEquipmentId: '',
       attackBonus: 0,
       normalMultiplier: 1,
       activeMultiplier: 1,
@@ -270,7 +271,11 @@
           (operator) =>
             `<option value="${escapeHtml(operator.name)}"${
               operator.name === selected ? ' selected' : ''
-            }>${escapeHtml(operator.name)} · ${escapeHtml(operator.branch)}</option>`,
+            }>${escapeHtml(operator.name)} · ${escapeHtml(operator.branch)}${
+              operator.id === 'char_618_acrbot'
+                ? ' · 森蚺指令特殊干员'
+                : ''
+            }</option>`,
         )
         .join('');
       return rows ? `<optgroup label="${rarity}★">${rows}</optgroup>` : '';
@@ -338,6 +343,29 @@
     ].join('');
   }
 
+  function conversionEquipmentOptions(selected) {
+    const groups = new Map();
+    for (const item of equipment.filter((entry) => entry.bondId)) {
+      const group = item.bondName || '通用 / 特殊';
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(item);
+    }
+    return [
+      '<option value="">不启用变形同构体</option>',
+      ...[...groups.entries()].map(
+        ([group, items]) =>
+          `<optgroup label="转为${escapeHtml(group)}">${items
+            .map(
+              (item) =>
+                `<option value="${escapeHtml(item.id)}"${
+                  item.id === selected ? ' selected' : ''
+                }>${escapeHtml(item.name)} · ${equipmentGrade(item)}</option>`,
+            )
+            .join('')}</optgroup>`,
+      ),
+    ].join('');
+  }
+
   function emptyReferenceEffects() {
     return {
       attackBonus: 0,
@@ -370,10 +398,18 @@
     const appliedCommands = state.commands.selectedIds
       .map((id) => commandMap.get(id))
       .filter(Boolean);
-    const selectedEquipment =
-      state.equipment.enabled && equipmentMap.get(slot.equipmentId);
-    if (selectedEquipment) {
-      mergeReferenceStats(effects, selectedEquipment.autoStats);
+    const equipmentIds = [
+      ...new Set(
+        [slot.equipmentId, slot.conversionEquipmentId].filter(Boolean),
+      ),
+    ];
+    const selectedEquipment = state.equipment.enabled
+      ? equipmentIds
+          .map((id) => equipmentMap.get(id))
+          .filter(Boolean)
+      : [];
+    for (const item of selectedEquipment) {
+      mergeReferenceStats(effects, item.autoStats);
     }
     if (state.commands.enabled) {
       for (const command of appliedCommands) {
@@ -382,7 +418,12 @@
     }
     return {
       effects,
-      equipment: selectedEquipment || null,
+      equipment: selectedEquipment[0] || null,
+      equipments: selectedEquipment,
+      conversionBondId:
+        state.equipment.enabled
+          ? equipmentMap.get(slot.conversionEquipmentId)?.bondId ?? null
+          : null,
       commands: state.commands.enabled ? appliedCommands : [],
     };
   }
@@ -467,10 +508,19 @@
       return { effects, applied };
     }
     const operator = findOperator(slot);
+    const conversionBondId = state.equipment.enabled
+      ? equipmentMap.get(slot.conversionEquipmentId)?.bondId ?? null
+      : null;
 
     for (const bond of selectedBonds()) {
       const settings = state.covenants.settings[bond.bondId];
-      if (!settings || !bondMatchesOperator(bond, operator)) continue;
+      if (
+        !settings ||
+        (!bondMatchesOperator(bond, operator) &&
+          bond.bondId !== conversionBondId)
+      ) {
+        continue;
+      }
       const effectiveLayer =
         layerCap === null || bond.bondId !== state.chartCovenantId
           ? settings.layer
@@ -1097,7 +1147,14 @@
           <select data-field="level" aria-label="技能等级">${levelOptions(skill, slot.level)}</select>
         </div>
         <select class="module-select" data-field="module" aria-label="模组">${moduleOptions(operator, slot.module)}</select>
-        <select class="equipment-select" data-field="equipmentId" aria-label="卫戍装备">${equipmentOptions(slot.equipmentId)}</select>
+        <label class="slot-equipment-picker">
+          <span>卫戍装备</span>
+          <select class="equipment-select" data-field="equipmentId" aria-label="卫戍装备">${equipmentOptions(slot.equipmentId)}</select>
+        </label>
+        <label class="slot-equipment-picker">
+          <span>变形同构体 + 配套装备</span>
+          <select class="equipment-select" data-field="conversionEquipmentId" aria-label="变形同构体转盟约装备">${conversionEquipmentOptions(slot.conversionEquipmentId)}</select>
+        </label>
         <div class="mini-row">
           <label class="trust-toggle"><input type="checkbox" data-field="trust"${slot.trust ? ' checked' : ''}> 满信赖</label>
           <label>潜能
@@ -1125,6 +1182,7 @@
         <p class="simulation-detail" data-role="simulation-detail"></p>
         <p class="covenant-impact" data-role="covenant-impact"></p>
         <p class="covenant-impact" data-role="reference-impact"></p>
+        <p class="covenant-impact" data-role="conversion-impact"></p>
         <p class="covenant-impact" data-role="trait-impact"></p>
         <p class="description" data-role="description"></p>
         <details class="advanced">
@@ -1347,8 +1405,12 @@
 
   function referenceSummary(reference) {
     const parts = [];
-    if (reference.equipment) {
-      parts.push(`装备：${reference.equipment.name}`);
+    if (reference.equipments?.length) {
+      parts.push(
+        `装备：${reference.equipments
+          .map((item) => item.name)
+          .join(' + ')}`,
+      );
     }
     if (reference.commands.length) {
       parts.push(
@@ -1441,7 +1503,13 @@
   }
 
   function updateResults() {
-    const results = state.slots.map((slot) => calculateSlot(slot));
+    const results = state.slots.map((slot) => ({
+      ...calculateSlot(slot),
+      equipmentBase: calculateSlot({
+        ...slot,
+        conversionEquipmentId: '',
+      }),
+    }));
     lastResults = results;
     document.querySelector('#chart-metrics').innerHTML = results
       .map(
@@ -1482,6 +1550,15 @@
         referenceSummary(item.reference);
       card.querySelector('[data-role="trait-impact"]').textContent =
         autoChessTraitSummary(item.autochessTrait);
+      const conversion = equipmentMap.get(
+        item.slot.conversionEquipmentId,
+      );
+      const equipmentDps = item.equipmentBase.result.cycleDps;
+      const convertedDps = item.result.cycleDps;
+      card.querySelector('[data-role="conversion-impact"]').textContent =
+        conversion
+          ? `装备 DPS ${number.format(equipmentDps)} → 转${conversion.bondName || '目标盟约'} ${number.format(convertedDps)}（${convertedDps >= equipmentDps ? '+' : ''}${number.format(convertedDps - equipmentDps)}）`
+          : `装备 DPS ${number.format(equipmentDps)} · 未启用变形同构体`;
     });
 
     document.querySelector('#result-body').innerHTML = results
@@ -1502,6 +1579,8 @@
             <td>${item.result.killTime === null ? '&gt; 120s' : `${decimal.format(item.result.killTime)}s`}</td>
             <td>${decimal.format(item.result.normalInterval)}s</td>
             <td>${escapeHtml(covenantSummary(item.covenant))}</td>
+            <td>${number.format(item.equipmentBase.result.cycleDps)}</td>
+            <td>${number.format(item.result.cycleDps)}</td>
             <td>${escapeHtml(referenceSummary(item.reference))}${
               autoChessTraitSummary(item.autochessTrait)
                 ? `<br>${escapeHtml(autoChessTraitSummary(item.autochessTrait))}`
@@ -1775,6 +1854,8 @@
       } else if (field === 'equipmentId') {
         slot.equipmentId = event.target.value;
         renderEquipment();
+      } else if (field === 'conversionEquipmentId') {
+        slot.conversionEquipmentId = event.target.value;
       } else if (event.target.type === 'checkbox') {
         slot[field] = event.target.checked;
       } else if (field === 'damageType') {
@@ -2155,6 +2236,9 @@
         '敌人防御',
         '敌方法抗',
         '命中盟约',
+        '装备DPS',
+        '转盟约DPS',
+        '转换目标',
         '装备',
         '指令',
         '装备/指令攻击加成',
@@ -2191,7 +2275,10 @@
           state.enemy.def,
           state.enemy.res,
           item.covenant.applied.map((entry) => entry.bond.name).join('、'),
-          item.reference.equipment?.name ?? '',
+          item.equipmentBase.result.cycleDps,
+          item.result.cycleDps,
+          equipmentMap.get(item.slot.conversionEquipmentId)?.bondName ?? '',
+          item.reference.equipments?.map((entry) => entry.name).join(' + ') ?? '',
           item.reference.commands.map((command) => command.name).join('、'),
           item.reference.effects.attackBonus,
           item.reference.effects.aspd,
@@ -2274,7 +2361,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.5 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.6 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
