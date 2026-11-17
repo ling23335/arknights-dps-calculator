@@ -1,2237 +1,353 @@
-:root {
-  color-scheme: dark;
-  --bg: #0b1017;
-  --panel: rgba(20, 28, 39, 0.88);
-  --panel-solid: #141c27;
-  --panel-raise: #192332;
-  --line: #2c394b;
-  --line-soft: rgba(126, 150, 180, 0.14);
-  --text: #edf2f8;
-  --muted: #8fa0b5;
-  --soft: #c7d2df;
-  --orange: #ffb168;
-  --orange-deep: #f18c47;
-  --teal: #72ddc5;
-  --blue: #78aaff;
-  --red: #ef6b70;
-  --radius: 18px;
-  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  min-width: 320px;
-  background:
-    radial-gradient(circle at 12% -10%, rgba(68, 112, 141, 0.2), transparent 38rem),
-    radial-gradient(circle at 92% 4%, rgba(157, 78, 42, 0.15), transparent 30rem),
-    var(--bg);
-}
-
-body {
-  min-height: 100vh;
-  margin: 0;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
-  background-size: 42px 42px;
-}
-
-button,
-input,
-select {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-a {
-  color: var(--teal);
-}
-
-.ambient {
-  position: fixed;
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(4px);
-}
-
-.ambient-a {
-  top: 6rem;
-  right: 5vw;
-  width: 18rem;
-  height: 18rem;
-  border: 1px solid rgba(255, 177, 104, 0.12);
-  border-radius: 50%;
-  box-shadow: inset 0 0 5rem rgba(255, 177, 104, 0.04);
-}
-
-.ambient-b {
-  bottom: 8vh;
-  left: -9rem;
-  width: 22rem;
-  height: 22rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(114, 221, 197, 0.08), transparent 70%);
-}
-
-.app-shell {
-  position: relative;
-  z-index: 1;
-  width: min(1580px, calc(100% - 48px));
-  margin: 0 auto;
-  padding: 38px 0 30px;
-}
-
-.masthead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 28px;
-  padding: 6px 4px 30px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--teal);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.pulse {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--teal);
-  box-shadow: 0 0 0 5px rgba(114, 221, 197, 0.09);
-}
-
-h1,
-h2,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 8px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(42px, 6vw, 76px);
-  font-weight: 500;
-  line-height: 0.95;
-  letter-spacing: -0.04em;
-}
-
-h1 em {
-  color: var(--orange);
-  font-style: italic;
-}
-
-.lede {
-  max-width: 650px;
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 15px;
-}
-
-.data-stamp {
-  min-width: 184px;
-  padding: 15px 18px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(14, 21, 30, 0.7);
-  text-align: right;
-}
-
-.data-stamp span,
-.data-stamp small {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.data-stamp strong {
-  display: block;
-  margin: 3px 0;
-  color: var(--orange);
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
-  gap: 24px;
-  margin-top: 26px;
-  min-width: 0;
-}
-
-.document-nav {
-  position: sticky;
-  z-index: 60;
-  top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  align-items: stretch;
-  margin: 0;
-  padding: 7px;
-  overflow: hidden;
-  border: 1px solid rgba(78, 101, 128, 0.58);
-  border-radius: 12px;
-  background: rgba(11, 16, 23, 0.92);
-  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(16px);
-}
-
-.document-nav-label {
-  padding: 3px 7px 6px;
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  white-space: nowrap;
-}
-
-.document-nav a {
-  padding: 7px 11px;
-  border-radius: 7px;
-  color: #aab8c8;
-  font-size: 11px;
-  text-decoration: none;
-}
-
-.document-nav a:hover,
-.document-nav a:focus-visible,
-.document-nav a.active {
-  background: rgba(114, 221, 197, 0.09);
-  color: var(--teal);
-  outline: 0;
-}
-
-[id] {
-  scroll-margin-top: 24px;
-}
-
-.module.is-highlight,
-.controls-panel.is-highlight {
-  animation: section-highlight 1.4s ease;
-}
-
-@keyframes section-highlight {
-  0%,
-  38% {
-    border-color: var(--teal);
-    box-shadow: 0 0 0 4px rgba(114, 221, 197, 0.1);
-  }
-}
-
-.workspace > *,
-.slots,
-.slot-card,
-.chart-panel,
-.result-panel {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.panel {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 42%),
-    var(--panel);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.16);
-  backdrop-filter: blur(14px);
-}
-
-.module {
-  position: relative;
-  margin-bottom: 18px;
-  transition: opacity 160ms ease, border-color 160ms ease;
-}
-
-.module.collapsed .module-body {
-  display: none;
-}
-
-.module.collapsed {
-  padding-bottom: 14px;
-}
-
-.module.maximized {
-  position: fixed;
-  z-index: 100;
-  inset: 14px;
-  margin: 0;
-  overflow: auto;
-  border-radius: 16px;
-  background: #0b1017;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.72);
-}
-
-.module.maximized .chart-wrap {
-  height: min(72vh, 820px);
-}
-
-.module.maximized .chart-covenant-controls {
-  max-height: calc(100vh - 260px);
-}
-
-.module.maximized .reference-list {
-  max-height: calc(100vh - 235px);
-}
-
-body.has-maximized-module {
-  overflow: hidden;
-}
-
-.module-tools {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 5px;
-}
-
-.module-tools button {
-  padding: 5px 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.025);
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.module-tools button:hover {
-  border-color: var(--teal);
-  color: var(--teal);
-}
-
-.module-head-actions,
-.comparison-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chart-head-right {
-  display: grid;
-  justify-items: end;
-  gap: 7px;
-}
-
-.controls-panel,
-.note-panel,
-.covenant-panel {
-  padding: 21px;
-}
-
-.reference-module {
-  padding: 22px;
-}
-
-.reference-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.reference-head h2 {
-  margin-bottom: 4px;
-  font-size: 24px;
-}
-
-.reference-head p:last-child {
-  max-width: 720px;
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.6;
-}
-
-.reference-master,
-.covenant-master {
-  display: grid;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 9px;
-  text-align: right;
-}
-
-.reference-master input,
-.covenant-master input {
-  justify-self: end;
-  width: 38px;
-  accent-color: var(--orange);
-}
-
-.reference-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  min-height: 31px;
-  padding: 13px 0 10px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.reference-summary span {
-  padding: 6px 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.reference-summary b {
-  color: var(--orange);
-}
-
-.reference-tools {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 92px;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 11px;
-}
-
-.reference-tools input[type="search"],
-.reference-tools select {
-  width: 100%;
-  padding: 9px 11px;
-}
-
-.reference-count {
-  color: var(--muted);
-  font-size: 10px;
-  text-align: right;
-}
-
-.reference-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-  max-height: 760px;
-  overflow-y: auto;
-  padding: 1px 4px 1px 1px;
-}
-
-.reference-card {
-  min-width: 0;
-  padding: 13px;
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 55%),
-    rgba(9, 15, 23, 0.62);
-  transition: border-color 160ms ease, background 160ms ease;
-}
-
-.reference-card:hover {
-  border-color: #50647c;
-  background-color: rgba(255, 255, 255, 0.035);
-}
-
-.reference-card.applied {
-  border-color: rgba(255, 177, 104, 0.55);
-  box-shadow: inset 3px 0 var(--orange);
-}
-
-.reference-card.is-highlight {
-  animation: reference-highlight 1.5s ease;
-}
-
-@keyframes reference-highlight {
-  0%,
-  42% {
-    border-color: var(--teal);
-    background-color: rgba(114, 221, 197, 0.15);
-    box-shadow: 0 0 0 4px rgba(114, 221, 197, 0.12);
-  }
-}
-
-.reference-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 9px;
-}
-
-.reference-card-head h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-}
-
-.reference-card-head h3 small {
-  color: var(--orange);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.reference-card-head span {
-  flex: 0 0 auto;
-  color: var(--teal);
-  font-size: 9px;
-}
-
-.reference-description {
-  margin: 8px 0 10px;
-  color: #a7b5c6;
-  font-size: 10px;
-  line-height: 1.62;
-  white-space: pre-line;
-}
-
-.reference-meta,
-.reference-stats,
-.reference-assign {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.reference-meta {
-  margin-bottom: 9px;
-  color: #7f90a4;
-  font-size: 9px;
-}
-
-.reference-meta span,
-.reference-stats span {
-  padding: 3px 6px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.reference-stats {
-  margin-bottom: 10px;
-}
-
-.reference-stats span {
-  color: var(--orange);
-  font-size: 9px;
-}
-
-.reference-assign {
-  align-items: center;
-}
-
-.reference-assign button {
-  padding: 5px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.reference-assign button:hover,
-.reference-assign button[aria-pressed="true"] {
-  border-color: var(--orange);
-  color: var(--orange);
-}
-
-.reference-assign button.clear {
-  margin-left: auto;
-}
-
-.reference-card details {
-  margin-top: 9px;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.reference-card summary {
-  cursor: pointer;
-}
-
-.reference-card code {
-  display: block;
-  margin-top: 6px;
-  overflow-wrap: anywhere;
-  color: #8092a8;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.reference-empty {
-  grid-column: 1 / -1;
-  margin: 10px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.equipment-select {
-  width: 100%;
-  padding: 8px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--soft);
-  font-size: 10px;
-}
-
-.kill-module {
-  padding: 22px;
-}
-
-.kill-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 16px;
-}
-
-.kill-head h2 {
-  margin-bottom: 4px;
-  font-size: 24px;
-}
-
-.kill-head p:last-child {
-  max-width: 720px;
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.6;
-}
-
-.kill-dashboard,
-.kill-results {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.kill-results {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 10px;
-}
-
-.kill-card,
-.kill-result-card {
-  min-width: 0;
-  padding: 15px;
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  background: rgba(9, 15, 23, 0.62);
-}
-
-.kill-card > span,
-.kill-requirement label > span {
-  display: block;
-  color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-}
-
-.kill-card h3 {
-  margin: 4px 0 3px;
-  color: var(--orange);
-  font-size: 20px;
-}
-
-.kill-card > p {
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.kill-target-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.kill-target-stats span {
-  padding: 7px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--soft);
-  font-size: 9px;
-}
-
-.kill-requirement {
-  display: grid;
-  gap: 12px;
-}
-
-.kill-requirement label {
-  display: grid;
-  gap: 5px;
-}
-
-.kill-requirement input {
-  width: 150px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--text);
-}
-
-.kill-requirement div > span {
-  display: block;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.kill-requirement strong {
-  display: block;
-  margin-top: 3px;
-  color: var(--teal);
-  font-size: 30px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kill-requirement small {
-  color: #7f91a7;
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.kill-result-card {
-  border-top: 3px solid var(--slot-color);
-}
-
-.kill-result-card.met {
-  background: rgba(114, 221, 197, 0.07);
-}
-
-.kill-result-card header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.kill-result-card h3 {
-  margin: 5px 0 10px;
-  color: var(--slot-color);
-  font-size: 16px;
-}
-
-.kill-result-card dl {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 10px;
-  margin: 0;
-  font-size: 10px;
-}
-
-.kill-result-card dt {
-  color: var(--muted);
-}
-
-.kill-result-card dd {
-  margin: 0;
-  color: var(--soft);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.kill-result-card strong {
-  display: block;
-  margin-top: 12px;
-  color: var(--teal);
-  font-size: 11px;
-}
-
-.section-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 22px;
-}
-
-.section-title.compact {
-  margin-bottom: 16px;
-}
-
-.section-title > span {
-  display: grid;
-  flex: 0 0 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgba(255, 177, 104, 0.3);
-  border-radius: 50%;
-  color: var(--orange);
-  font: 700 10px/1 "Segoe UI", sans-serif;
-}
-
-.section-title h2 {
-  margin: 0 0 2px;
-  font-size: 17px;
-}
-
-.section-title p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.control {
-  display: block;
-  padding: 15px 0;
-  border-top: 1px solid var(--line-soft);
-}
-
-.control:first-of-type {
-  border-top: 0;
-}
-
-.control-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  color: var(--soft);
-  font-size: 13px;
-}
-
-.control output {
-  color: var(--orange);
-  font-variant-numeric: tabular-nums;
-}
-
-input[type="range"] {
-  width: 100%;
-  height: 4px;
-  margin: 0;
-  accent-color: var(--teal);
-}
-
-select,
-input[type="number"],
-input[type="search"] {
-  min-width: 0;
-  border: 1px solid #3a485b;
-  border-radius: 9px;
-  outline: none;
-  background: #0e151f;
-  color: var(--text);
-}
-
-select {
-  padding: 9px 11px;
-}
-
-input[type="number"] {
-  padding: 8px 9px;
-  font-variant-numeric: tabular-nums;
-}
-
-select:focus,
-input[type="number"]:focus,
-input[type="search"]:focus {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(114, 221, 197, 0.08);
-}
-
-.select-control select {
-  width: 100%;
-}
-
-.stronghold-enemy-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid rgba(114, 221, 197, 0.22);
-  border-radius: 11px;
-  background: rgba(114, 221, 197, 0.055);
-}
-
-.stronghold-enemy-toggle span {
-  display: grid;
-  gap: 2px;
-}
-
-.stronghold-enemy-toggle b {
-  color: var(--soft);
-  font-size: 12px;
-}
-
-.stronghold-enemy-toggle small {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.stronghold-enemy-toggle input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--teal);
-}
-
-.stronghold-enemy-panel {
-  display: grid;
-  gap: 7px;
-  margin-top: 9px;
-}
-
-.stronghold-enemy-panel input[type="search"],
-.stronghold-enemy-panel select {
-  width: 100%;
-  padding: 8px 9px;
-  font-size: 10px;
-}
-
-.stronghold-enemy-panel.is-disabled {
-  display: none;
-}
-
-.enemy-profile {
-  padding: 9px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 9px;
-  background: rgba(7, 12, 18, 0.56);
-}
-
-.enemy-profile strong {
-  display: block;
-  color: var(--orange);
-  font-size: 12px;
-}
-
-.enemy-profile span {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.enemy-profile div {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  margin-top: 7px;
-}
-
-.enemy-profile i {
-  color: var(--soft);
-  font-size: 9px;
-  font-style: normal;
-}
-
-.enemy-factor-details {
-  margin-top: 8px;
-  color: #7e8fa4;
-  font-size: 8px;
-}
-
-.enemy-factor-details summary {
-  cursor: pointer;
-}
-
-.enemy-factor-details p {
-  margin: 5px 0 0;
-  line-height: 1.5;
-}
-
-.ghost-button,
-.primary-button {
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.ghost-button {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #38495f;
-  background: transparent;
-  color: var(--soft);
-}
-
-.ghost-button:hover {
-  border-color: var(--teal);
-  color: var(--teal);
-}
-
-.primary-button {
-  padding: 11px 16px;
-  border: 1px solid rgba(255, 177, 104, 0.45);
-  background: rgba(255, 177, 104, 0.1);
-  color: var(--orange);
-}
-
-.primary-button:hover {
-  background: rgba(255, 177, 104, 0.18);
-}
-
-.note-panel > p,
-.note-panel details {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.note-panel summary {
-  cursor: pointer;
-  color: var(--soft);
-}
-
-.covenant-workspace {
-  padding: 24px;
-  margin-bottom: 20px;
-  border-color: rgba(255, 177, 104, 0.24);
-  background:
-    radial-gradient(circle at 92% -10%, rgba(255, 177, 104, 0.12), transparent 33%),
-    radial-gradient(circle at 0 100%, rgba(114, 221, 197, 0.06), transparent 38%),
-    var(--panel);
-}
-
-.covenant-workspace:not(.active) {
-  border-color: var(--line);
-}
-
-.covenant-workspace-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.covenant-workspace-head h2 {
-  margin: 0 0 6px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 32px;
-  font-weight: 500;
-}
-
-.covenant-workspace-head p:last-child {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.covenant-master {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(8, 14, 21, 0.7);
-  color: var(--soft);
-  font-size: 12px;
-}
-
-.covenant-master input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--orange);
-}
-
-.covenant-summary {
-  display: grid;
-  grid-template-columns: 0.65fr 0.65fr repeat(3, 1fr);
-  gap: 9px;
-  margin: 20px 0;
-}
-
-.covenant-summary > article {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  background: rgba(9, 15, 23, 0.65);
-}
-
-.covenant-summary > article > span {
-  display: block;
-  color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.05em;
-}
-
-.covenant-summary > article > strong {
-  display: block;
-  margin: 2px 0;
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-}
-
-.covenant-summary > article > small {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.covenant-applicant {
-  border-color: color-mix(in srgb, var(--slot-color) 22%, var(--line)) !important;
-}
-
-.covenant-applicant > strong {
-  overflow: hidden;
-  color: var(--slot-color);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.covenant-applicant p {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 7px 0 0;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.covenant-applicant p i {
-  padding: 2px 5px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.045);
-  font-style: normal;
-}
-
-.covenant-workbench {
-  display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 14px;
-}
-
-.covenant-library,
-.covenant-selected {
-  min-width: 0;
-  border: 1px solid var(--line-soft);
-  border-radius: 13px;
-  background: rgba(9, 15, 23, 0.52);
-}
-
-.covenant-library {
-  padding: 12px;
-}
-
-.covenant-tools {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px;
-  gap: 7px;
-  margin-bottom: 10px;
-}
-
-.covenant-tools input[type="search"] {
-  width: 100%;
-  padding: 9px 11px;
-}
-
-.covenant-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  max-height: 650px;
-  overflow-y: auto;
-  padding-right: 3px;
-}
-
-.covenant-card {
-  min-width: 0;
-  padding: 11px;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.018);
-  color: var(--text);
-  text-align: left;
-}
-
-.covenant-card:hover {
-  border-color: #50647c;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.covenant-card.selected {
-  border-color: rgba(255, 177, 104, 0.55);
-  background: rgba(255, 177, 104, 0.08);
-  box-shadow: inset 3px 0 var(--orange);
-}
-
-.covenant-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.covenant-card-top b {
-  overflow: hidden;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.covenant-card-top i {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 8px;
-  font-style: normal;
-}
-
-.covenant-card.core .covenant-card-top b {
-  color: var(--orange);
-}
-
-.covenant-card.extra .covenant-card-top b {
-  color: var(--teal);
-}
-
-.covenant-card-meta {
-  display: block;
-  margin-top: 4px;
-  color: #7c8da2;
-  font-size: 9px;
-}
-
-.covenant-card-desc {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 6px;
-  color: #9eacbd;
-  font-size: 9px;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.covenant-empty {
-  margin: 10px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.covenant-selected {
-  padding: 14px;
-}
-
-.covenant-selected-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 0 3px 11px;
-}
-
-.covenant-selected-head span {
-  color: var(--muted);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-}
-
-.covenant-selected-head h3 {
-  margin: 2px 0 0;
-  font-size: 17px;
-}
-
-.covenant-selected-head > strong {
-  color: var(--orange);
-  font: 700 12px/1.2 "Segoe UI", sans-serif;
-}
-
-.covenant-selected-list {
-  display: grid;
-  gap: 8px;
-  max-height: 650px;
-  overflow-y: auto;
-  padding-right: 3px;
-}
-
-.selected-covenant {
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: rgba(12, 19, 28, 0.82);
-}
-
-.selected-covenant.inactive {
-  opacity: 0.64;
-}
-
-.selected-covenant-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.selected-covenant-head span {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.selected-covenant-head h4 {
-  margin: 2px 0 0;
-  color: var(--orange);
-  font-size: 15px;
-}
-
-.selected-covenant-head button {
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
-}
-
-.selected-covenant-head button:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-.covenant-sliders {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 11px 0 9px;
-}
-
-.covenant-sliders label {
-  display: grid;
-  gap: 5px;
-}
-
-.covenant-sliders span {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.covenant-sliders output {
-  color: var(--soft);
-  font-variant-numeric: tabular-nums;
-}
-
-.covenant-sliders input {
-  height: 3px;
-  accent-color: var(--orange);
-}
-
-.covenant-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.covenant-metrics > span {
-  display: grid;
-  gap: 1px;
-  padding: 5px 7px;
-  border-radius: 6px;
-  background: rgba(114, 221, 197, 0.065);
-}
-
-.covenant-metrics small {
-  color: var(--muted);
-  font-size: 8px;
-}
-
-.covenant-metrics b {
-  color: var(--teal);
-  font-size: 10px;
-}
-
-.selected-covenant-desc {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 8px 0;
-  color: #97a7ba;
-  font-size: 9px;
-  line-height: 1.5;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.selected-covenant details {
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.selected-covenant summary {
-  cursor: pointer;
-}
-
-.covenant-params {
-  display: grid;
-  gap: 4px;
-  margin-top: 7px;
-}
-
-.covenant-params p {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: #8192a8;
-  line-height: 1.5;
-}
-
-.covenant-params code {
-  color: var(--orange);
-}
-
-.covenant-members {
-  margin: 7px 0 0;
-  color: #7e8fa4;
-  line-height: 1.55;
-}
-
-.formula-list {
-  padding-top: 8px;
-}
-
-.formula-list p {
-  margin: 6px 0;
-}
-
-.formula-list b {
-  color: var(--orange);
-}
-
-.comparison-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 2px 4px 17px;
-}
-
-.comparison-head h2 {
-  margin: 0 0 4px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 30px;
-  font-weight: 500;
-}
-
-.comparison-head p:last-child {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.slots {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.slot-card {
-  position: relative;
-  overflow: hidden;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 100% 0, var(--slot-glow), transparent 43%),
-    var(--panel-solid);
-}
-
-.slot-card::before {
-  position: absolute;
-  top: 0;
-  right: 18px;
-  left: 18px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--slot-color), transparent);
-  content: "";
-  opacity: 0.8;
-}
-
-.slot-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 13px;
-}
-
-.slot-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.slot-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--slot-color);
-  box-shadow: 0 0 12px var(--slot-color);
-}
-
-.damage-pill {
-  padding: 3px 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.slot-card select {
-  width: 100%;
-}
-
-.operator-select {
-  margin-bottom: 8px;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.operator-search {
-  display: flex;
-  height: 34px;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 6px;
-  padding: 0 10px;
-  border: 1px solid #354459;
-  border-radius: 9px;
-  background: rgba(9, 15, 23, 0.72);
-  color: var(--muted);
-}
-
-.operator-search:focus-within {
-  border-color: var(--slot-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--slot-color) 9%, transparent);
-}
-
-.operator-search input {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--soft);
-  font-size: 12px;
-}
-
-.operator-search input::placeholder {
-  color: #6e7f94;
-}
-
-.operator-search input[aria-invalid="true"] {
-  color: var(--red);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-
-.skill-line {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 68px;
-  gap: 7px;
-  margin-bottom: 8px;
-}
-
-.module-select {
-  margin-bottom: 12px;
-  color: var(--soft);
-}
-
-.mini-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-
-.mini-row label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.mini-row select {
-  flex: 1;
-  padding: 6px;
-  font-size: 11px;
-}
-
-.trust-toggle {
-  white-space: nowrap;
-}
-
-.trust-toggle input {
-  accent-color: var(--slot-color);
-}
-
-.main-result {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px 0;
-  border-top: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.main-result span {
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.main-result strong {
-  display: block;
-  color: var(--slot-color);
-  font-size: 25px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.result-pair {
-  color: var(--muted);
-  font-size: 11px;
-  text-align: right;
-  line-height: 1.6;
-}
-
-.result-pair b {
-  color: var(--soft);
-  font-variant-numeric: tabular-nums;
-}
-
-.covenant-impact {
-  min-height: 16px;
-  margin: 10px 0 0;
-  color: var(--orange);
-  font-size: 10px;
-  line-height: 1.5;
-}
-
-.simulation-detail {
-  margin: 8px 0 0;
-  color: #7f91a7;
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.description {
-  display: -webkit-box;
-  overflow: hidden;
-  min-height: 44px;
-  margin: 12px 0;
-  color: #aebaca;
-  font-size: 11px;
-  line-height: 1.55;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.advanced {
-  margin-top: 10px;
-}
-
-.advanced summary {
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.advanced-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 10px;
-}
-
-.advanced-grid label {
-  display: grid;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.advanced-grid input,
-.advanced-grid select {
-  width: 100%;
-  padding: 6px 7px;
-  font-size: 11px;
-}
-
-.chart-panel {
-  padding: 21px 22px 16px;
-  margin-bottom: 18px;
-}
-
-.chart-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 8px;
-}
-
-.chart-head h2 {
-  margin: 0;
-  font-size: 19px;
-}
-
-.chart-summary {
-  max-width: 430px;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: right;
-}
-
-.chart-workbench {
-  display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 10px;
-}
-
-.chart-main {
-  min-width: 0;
-}
-
-.chart-covenant-controls {
-  align-self: start;
-  min-width: 0;
-  max-height: 515px;
-  overflow-y: auto;
-  padding: 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  background: rgba(9, 15, 23, 0.62);
-}
-
-.chart-covenant-controls h3 {
-  margin: 0 0 4px;
-  font-size: 14px;
-}
-
-.chart-covenant-controls > p {
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
-}
-
-.chart-covenant-list {
-  display: grid;
-  gap: 7px;
-}
-
-.chart-covenant-row {
-  padding: 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.chart-covenant-row.focused {
-  border-color: rgba(255, 177, 104, 0.58);
-  background: rgba(255, 177, 104, 0.07);
-}
-
-.chart-covenant-choice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--soft);
-  font-size: 10px;
-}
-
-.chart-covenant-choice label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chart-covenant-choice input {
-  accent-color: var(--orange);
-}
-
-.chart-layer-input {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--orange);
-}
-
-.chart-covenant-number {
-  width: 54px;
-  padding: 4px 5px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--orange);
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.chart-covenant-row input[type="range"] {
-  width: 100%;
-  height: 3px;
-  margin-top: 8px;
-  accent-color: var(--orange);
-}
-
-.chart-covenant-impact {
-  display: block;
-  margin-top: 4px;
-  color: #74869b;
-  font-size: 8px;
-}
-
-.chart-covenant-note {
-  margin: 10px 0 0;
-  color: #74869b;
-  font-size: 8px;
-  line-height: 1.55;
-}
-
-.chart-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.chart-metric {
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line-soft);
-  border-left: 3px solid var(--metric-color);
-  border-radius: 9px;
-  background: rgba(9, 15, 23, 0.6);
-}
-
-.chart-metric span,
-.chart-metric small {
-  display: block;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chart-metric strong {
-  display: block;
-  margin: 3px 0;
-  color: var(--metric-color);
-  font-size: 23px;
-  font-variant-numeric: tabular-nums;
-}
-
-.chart-wrap {
-  position: relative;
-  height: 365px;
-}
-
-#chart {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.tooltip {
-  position: absolute;
-  z-index: 2;
-  min-width: 138px;
-  padding: 9px 11px;
-  border: 1px solid #40516a;
-  border-radius: 10px;
-  background: rgba(10, 16, 24, 0.94);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  color: var(--soft);
-  font-size: 11px;
-  line-height: 1.7;
-  pointer-events: none;
-  transform: translate(-50%, calc(-100% - 14px));
-}
-
-.tooltip b {
-  color: var(--orange);
-}
-
-.chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px 20px;
-  padding: 5px 10px 3px 54px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.legend-item i {
-  width: 17px;
-  height: 2px;
-  background: var(--legend-color);
-}
-
-.legend-item b {
-  color: var(--legend-color);
-  font-variant-numeric: tabular-nums;
-}
-
-.result-panel {
-  padding: 21px 22px 15px;
-}
-
-.table-scroll {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-th {
-  padding: 0 12px 10px;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-align: right;
-  white-space: nowrap;
-}
-
-th:first-child,
-td:first-child {
-  text-align: left;
-}
-
-td {
-  padding: 13px 12px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--soft);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-}
-
-tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.table-name {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.table-name i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--row-color);
-}
-
-.table-name b {
-  display: block;
-  color: var(--text);
-  font-size: 12px;
-}
-
-.table-name small {
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.cycle-cell {
-  color: var(--row-color);
-  font-weight: 700;
-}
-
-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 22px 4px 4px;
-  color: #78889c;
-  font-size: 10px;
-}
-
-@media (max-width: 1180px) {
-  .workspace {
-    grid-template-columns: 245px minmax(0, 1fr);
-  }
-
-  .slots {
-    grid-template-columns: 1fr;
-  }
-
-  .covenant-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .covenant-workbench {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-workbench {
-    grid-template-columns: 205px minmax(0, 1fr);
-  }
-
-  .slot-card {
-    display: grid;
-    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
-    column-gap: 18px;
-  }
-
-  .slot-top,
-  .operator-search,
-  .operator-select,
-  .skill-line,
-  .module-select,
-  .equipment-select,
-  .mini-row {
-    grid-column: 1;
-  }
-
-  .main-result {
-    grid-column: 2;
-    grid-row: 1 / span 5;
-    align-self: stretch;
-    border-top: 0;
-    padding: 6px 0 0 18px;
-    border-left: 1px solid var(--line-soft);
-  }
-
-  .description,
-  .simulation-detail,
-  .advanced {
-    grid-column: 2;
-    padding-left: 18px;
-  }
-}
-
-@media (max-width: 820px) {
-  .app-shell {
-    width: min(100% - 28px, 720px);
-    padding-top: 22px;
-  }
-
-  .document-nav {
-    grid-column: 1 / -1;
-    top: 6px;
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  [id] {
-    scroll-margin-top: 70px;
-  }
-
-  .masthead {
-    align-items: flex-start;
-  }
-
-  .data-stamp {
-    min-width: 135px;
-  }
-
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .covenant-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .comparison-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .chart-workbench {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-covenant-controls {
-    max-height: 260px;
-  }
-
-  .chart-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .reference-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .kill-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .kill-dashboard,
-  .kill-results {
-    grid-template-columns: 1fr;
-  }
-
-  .slot-card {
-    display: block;
-  }
-
-  .main-result {
-    padding: 13px 0;
-    border-top: 1px solid var(--line-soft);
-    border-left: 0;
-  }
-
-  .description,
-  .simulation-detail,
-  .advanced {
-    padding-left: 0;
-  }
-}
-
-@media (max-width: 560px) {
-  h1 {
-    font-size: 43px;
-  }
-
-  .masthead,
-  .sidebar,
-  footer {
-    display: block;
-  }
-
-  .data-stamp {
-    width: 100%;
-    margin-top: 18px;
-    text-align: left;
-  }
-
-  .document-nav-label {
-    display: none;
-  }
-
-  .reference-module {
-    padding: 16px;
-  }
-
-  .reference-head .module-head-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .reference-master {
-    text-align: left;
-  }
-
-  .reference-master input {
-    justify-self: start;
-  }
-
-  .reference-tools,
-  .reference-list {
-    grid-template-columns: 1fr;
-  }
-
-  .kill-module {
-    padding: 16px;
-  }
-
-  .kill-target-stats {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .reference-count {
-    text-align: left;
-  }
-
-  .sidebar .panel + .panel {
-    margin-top: 14px;
-  }
-
-  .primary-button {
-    width: 100%;
-  }
-
-  .covenant-workspace {
-    padding: 16px;
-  }
-
-  .covenant-workspace-head,
-  .covenant-tools {
-    display: block;
-  }
-
-  .covenant-master,
-  .covenant-tools select {
-    margin-top: 10px;
-  }
-
-  .covenant-summary {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .covenant-applicant {
-    grid-column: span 2;
-  }
-
-  .covenant-list {
-    grid-template-columns: 1fr;
-  }
-
-  .covenant-sliders {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-summary {
-    display: none;
-  }
-
-  .chart-wrap {
-    height: 310px;
-  }
-
-  .chart-legend {
-    padding-left: 8px;
-  }
-
-  footer span {
-    display: block;
-    margin-bottom: 6px;
-  }
-}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="app-build" content="2026-11-17.3">
+  <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
+  <link rel="stylesheet" href="src/styles.css?v=2026-11-17.3">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <div class="app-shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow"><span class="pulse"></span> STRONGHOLD PROTOCOL / COVENANT</p>
+        <h1>PRTS <em>Alliance</em> Lab</h1>
+        <p class="lede">以本地游戏数据推算盟约层数、装备与指令修正，再带入干员 DPS 对比。</p>
+      </div>
+      <div class="data-stamp">
+        <span>本地盟约数据</span>
+        <strong id="covenant-count">读取中</strong>
+        <small id="data-date">V3_1</small>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar">
+        <nav id="document-nav" class="document-nav" aria-label="页面目录">
+          <span class="document-nav-label">项目栏</span>
+          <a href="#chart-section">战况图</a>
+          <a href="#covenant-panel">卫戍盟约</a>
+          <a href="#equipment-section">装备</a>
+          <a href="#command-section">指令</a>
+          <a href="#enemy-section">敌人</a>
+          <a href="#kill-section">击杀</a>
+          <a href="#dps-section">DPS 对比</a>
+        </nav>
+
+        <section id="enemy-section" class="panel controls-panel">
+          <div class="section-title">
+            <span>01</span>
+            <div>
+              <h2>敌人参数</h2>
+              <p>所有对比槽位共享</p>
+            </div>
+          </div>
+
+          <label class="stronghold-enemy-toggle">
+            <span>
+              <b>使用终极模拟敌人</b>
+              <small>已应用终极模式、攻击、防御与法抗倍率</small>
+            </span>
+            <input id="stronghold-enemy-enabled" type="checkbox" checked>
+          </label>
+          <div id="stronghold-enemy-panel" class="stronghold-enemy-panel">
+            <input id="stronghold-enemy-search" type="search" placeholder="搜索卫戍敌人">
+            <select id="stronghold-enemy" aria-label="卫戍协议敌人"></select>
+            <div id="stronghold-enemy-profile" class="enemy-profile"></div>
+          </div>
+
+          <label class="control">
+            <span class="control-head">
+              <span>防御力</span>
+              <output id="def-output">4500</output>
+            </span>
+            <input id="enemy-def" type="range" min="0" max="20000" step="10" value="4500">
+          </label>
+
+          <label class="control">
+            <span class="control-head">
+              <span>法术抗性</span>
+              <output id="res-output">75%</output>
+            </span>
+            <input id="enemy-res" type="range" min="0" max="100" step="1" value="75">
+          </label>
+
+          <button id="reset" class="ghost-button" type="button">恢复示例配置</button>
+        </section>
+
+        <section class="panel note-panel">
+          <div class="section-title compact">
+            <span>02</span>
+            <div>
+              <h2>计算口径</h2>
+              <p>透明、可覆盖</p>
+            </div>
+          </div>
+          <p>自动读取 PRTS 的满级攻击、信赖、潜能、模组和技能参数，并从技能描述估算攻击倍率、攻击速度与间隔变化。</p>
+          <details>
+            <summary>查看公式与限制</summary>
+            <div class="formula-list">
+              <p><b>物理</b> max(攻击 - 防御, 攻击 × 5%)</p>
+              <p><b>法术</b> 攻击 × (1 - 法抗)，最低保留 5%</p>
+              <p><b>逐帧</b> 以 1/60 秒为步长推进攻击、技能持续和回转，按实际命中事件累计伤害与击杀时间。</p>
+              <p><b>充能</b> 可充能技能逐个消耗存量；点燃每次消耗后进入 36 帧与当前攻击间隔的较小值作为阻回时间。</p>
+              <p><b>终极敌人</b> 应用终极模拟模式倍率；领袖生命取本地游戏终极血量表，不使用基础敌人面板。</p>
+              <p><b>盟约</b> 数据来自本地热更新；干员只自动应用其实际所属且达到激活人数的盟约。</p>
+              <p>召唤物、随机目标、多段命中和特殊状态无法由文本稳定推断，使用“高级参数”手动覆盖。</p>
+            </div>
+          </details>
+        </section>
+      </aside>
+
+      <main>
+        <section id="chart-section" class="module panel chart-panel" data-module="chart">
+          <div class="chart-head">
+            <div>
+              <p class="eyebrow">FRAME-BY-FRAME ULTIMATE</p>
+              <h2 id="chart-title">纯逐帧 DPS · 随盟约层数增长</h2>
+            </div>
+            <div class="chart-head-right">
+              <div id="chart-summary" class="chart-summary">等待计算</div>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div class="chart-workbench">
+              <aside id="chart-covenant-controls" class="chart-covenant-controls" aria-label="盟约横轴与层数"></aside>
+              <div class="chart-main">
+                <div id="chart-metrics" class="chart-metrics"></div>
+                <div class="chart-wrap">
+                  <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约层数增长的曲线"></canvas>
+                  <div id="tooltip" class="tooltip" hidden></div>
+                </div>
+                <div id="chart-legend" class="chart-legend"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="covenant-panel" class="module panel covenant-workspace" data-module="covenant">
+          <div class="covenant-workspace-head">
+            <div>
+              <p class="eyebrow">COVENANT WORKBENCH</p>
+              <h2>卫戍协议 · 盟约推演</h2>
+              <p>全部 26 条盟约均可配置层数与激活人数，并自动带入下方干员对比。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="covenant-master">
+                <span>启用盟约计算</span>
+                <input id="covenants-enabled" type="checkbox">
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="covenant-summary" class="covenant-summary"></div>
+            <div class="covenant-workbench">
+              <section class="covenant-library">
+                <div class="covenant-tools">
+                  <input id="covenant-search" type="search" placeholder="搜索盟约或成员干员">
+                  <select id="covenant-filter" aria-label="盟约分类">
+                    <option value="all">全部盟约</option>
+                    <option value="2">核心盟约</option>
+                    <option value="1">附加与特殊盟约</option>
+                  </select>
+                </div>
+                <div id="covenant-list" class="covenant-list"></div>
+              </section>
+              <section class="covenant-selected">
+                <div class="covenant-selected-head">
+                  <div>
+                    <span>当前模拟</span>
+                    <h3>已选盟约</h3>
+                  </div>
+                  <strong id="selected-count">0 / 26</strong>
+                </div>
+                <div id="covenant-selected-list" class="covenant-selected-list"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="equipment-section" class="module panel reference-module" data-module="equipment">
+          <div class="reference-head">
+            <div>
+              <p class="eyebrow">EQUIPMENT INDEX</p>
+              <h2>卫戍协议 · 装备效果</h2>
+              <p>按本地 V3_1 数据检索装备；可配置到方案 A/B/C。攻击力、攻速、穿透与技力消耗会进入 DPS。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="reference-master">
+                <span>启用装备修正</span>
+                <input id="equipment-enabled" type="checkbox" checked>
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="equipment-summary" class="reference-summary"></div>
+            <div class="reference-tools">
+              <input id="equipment-search" type="search" placeholder="搜索装备名、盟约或效果文本">
+              <select id="equipment-filter" aria-label="装备盟约筛选">
+                <option value="all">全部装备</option>
+              </select>
+              <span id="equipment-count" class="reference-count"></span>
+            </div>
+            <div id="equipment-list" class="reference-list"></div>
+          </div>
+        </section>
+
+        <section id="command-section" class="module panel reference-module" data-module="command">
+          <div class="reference-head">
+            <div>
+              <p class="eyebrow">COMMAND INDEX</p>
+              <h2>卫戍协议 · 指令效果</h2>
+              <p>被动协议与主动指令均收录；勾选后，可识别的常驻数值修正会应用到三个方案。</p>
+            </div>
+            <div class="module-head-actions">
+              <label class="reference-master">
+                <span>启用指令修正</span>
+                <input id="commands-enabled" type="checkbox">
+              </label>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <div id="command-summary" class="reference-summary"></div>
+            <div class="reference-tools">
+              <input id="command-search" type="search" placeholder="搜索指令名、分队或效果文本">
+              <select id="command-filter" aria-label="指令类型筛选">
+                <option value="all">全部类型</option>
+                <option value="1">被动协议</option>
+                <option value="2">主动指令</option>
+                <option value="0">未解锁指令</option>
+              </select>
+              <span id="command-count" class="reference-count"></span>
+            </div>
+            <div id="command-list" class="reference-list"></div>
+          </div>
+        </section>
+
+        <section id="dps-section" class="module dps-module" data-module="dps">
+          <div class="comparison-head">
+            <div>
+              <p class="eyebrow">COMPARISON BOARD</p>
+              <h2>三路输出对比</h2>
+              <p>先选干员与技能，再按需要校准技能参数。</p>
+            </div>
+            <div class="comparison-actions">
+              <button id="export" class="primary-button" type="button">导出当前结果 CSV</button>
+              <div class="module-tools">
+                <button type="button" data-module-collapse>收起</button>
+                <button type="button" data-module-maximize>放大</button>
+              </div>
+            </div>
+          </div>
+          <div class="module-body">
+            <section id="slots" class="slots" aria-label="干员技能对比设置"></section>
+            <datalist id="operator-search-list"></datalist>
+
+            <section class="panel result-panel">
+              <div class="section-title">
+                <span>03</span>
+                <div>
+                  <h2>结果明细</h2>
+                  <p>技能期与完整周期分开看</p>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>方案</th>
+                      <th>攻击力</th>
+                      <th>普攻 DPS</th>
+                      <th>技能 DPS</th>
+                      <th>逐帧 DPS</th>
+                      <th>击杀时间</th>
+                      <th>攻击间隔</th>
+                      <th>卫戍加成</th>
+                      <th>装备 / 指令</th>
+                      <th>技能占比</th>
+                    </tr>
+                  </thead>
+                  <tbody id="result-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="kill-section" class="module panel kill-module" data-module="kill">
+          <div class="kill-head">
+            <div>
+              <p class="eyebrow">TARGET KILL CALCULATOR</p>
+              <h2>敌人击杀计算器</h2>
+              <p>使用当前终极模拟敌人的生命值与防御参数，计算三套方案的击杀时间，以及限定时间内所需的最低 DPS。</p>
+            </div>
+            <div class="module-tools">
+              <button type="button" data-module-collapse>收起</button>
+              <button type="button" data-module-maximize>放大</button>
+            </div>
+          </div>
+          <div class="module-body">
+            <div class="kill-dashboard">
+              <article class="kill-card">
+                <span>当前目标</span>
+                <h3 id="kill-target-name">读取中</h3>
+                <p id="kill-target-meta"></p>
+                <div id="kill-target-stats" class="kill-target-stats"></div>
+              </article>
+              <article class="kill-card kill-requirement">
+                <label>
+                  <span>限定击杀时间</span>
+                  <input id="kill-time-limit" type="number" min="0.1" max="3600" step="0.5" value="5">
+                </label>
+                <div>
+                  <span>限定时间内最低 DPS</span>
+                  <strong id="kill-required-dps">—</strong>
+                </div>
+                <small>按“终极敌人生命值 ÷ 限定秒数”计算，以页面当前 DPS 口径为准。</small>
+              </article>
+            </div>
+            <div id="kill-results" class="kill-results"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <span>数据来源：本地游戏 V3_1 热更新（盟约、敌人） · <a href="https://prts.wiki/w/干员一览" target="_blank" rel="noreferrer">PRTS 干员一览</a></span>
+      <span>仅供横向比较。实际伤害受目标数量、命中丢失与特殊机制影响。</span>
+    </footer>
+  </div>
+
+  <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
+  <script src="data/operators.js?v=2026-11-17.3"></script>
+  <script src="data/covenants.js?v=2026-11-17.3"></script>
+  <script src="data/enemies.js?v=2026-11-17.3"></script>
+  <script src="data/equipment.js?v=2026-11-17.3"></script>
+  <script src="data/commands.js?v=2026-11-17.3"></script>
+  <script src="data/autochess-traits.js?v=2026-11-17.3"></script>
+  <script src="src/calc.js?v=2026-11-17.3"></script>
+  <script src="src/app.js?v=2026-11-17.3"></script>
+</body>
+</html>
