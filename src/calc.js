@@ -50,7 +50,11 @@ function resolveOperatorStats(
   };
 }
 
-function estimateSkillHints(description = '') {
+function estimateSkillHints(
+  description = '',
+  blackboard = {},
+  maxChargeTime = 1,
+) {
   const scalePatterns = [
     /造成[^。\n]{0,24}?相当于攻击力\s*(\d+(?:\.\d+)?)%/,
     /造成[^。\n]{0,24}?相当于\s*(\d+(?:\.\d+)?)%攻击力/,
@@ -79,6 +83,9 @@ function estimateSkillHints(description = '') {
       /攻击力(?:提升|增加|提高|\+)\s*(\d+(?:\.\d+)?)%/,
     ) ??
     description.match(
+      /攻击力[、和与](?:防御力|生命上限|攻击速度)[^。\n]{0,12}?各?[+＋]\s*(\d+(?:\.\d+)?)%/,
+    ) ??
+    description.match(
       /攻击力[^。\n]{0,8}?\+\s*(\d+(?:\.\d+)?)%/,
     );
   const toBuffScale = toBuffMatch
@@ -92,12 +99,80 @@ function estimateSkillHints(description = '') {
     rampMatch ? rampScale : toBuffScale,
     addBuffScale,
   );
+  const blackboardScaleKeys = [
+    'fk',
+    'attack@atk_scale',
+    'damage_scale',
+    'attack@damage_scale',
+    'attack@aoe_atk_scale',
+    'attack@physical_atk_scale',
+    'attack@magic_atk_scale',
+    'aoe_damage_scale',
+    'atk_scale',
+    'atk_scale_1',
+    'atk_scale_2',
+    'atk_scale_s1',
+    'atk_scale_s2',
+    'atk_scale_s3',
+    'attack@atk_scale_base',
+    'attack@atk_scale_s2',
+    'attack@atk_scale_s3',
+    'attack@main_atk_scale',
+  ];
+  const blackboardScale = blackboardScaleKeys
+    .map((key) => Number(blackboard[key]))
+    .find((value) => Number.isFinite(value) && value > 0);
+  const hasTextScale = Boolean(
+    scaleMatch || rampMatch || toBuffMatch || addBuffMatch,
+  );
+  let resolvedAttackMultiplier =
+    !blackboardScale
+      ? attackMultiplier
+      : rampMatch
+        ? rampScale
+        : hasTextScale
+          ? Math.max(attackMultiplier, blackboardScale)
+          : blackboardScale;
 
   const interval = description.match(
     /攻击间隔[^。；，,]*[（(]\s*([-+]?\d+(?:\.\d+)?)\s*[）)]/,
   );
   const aspdMatch = description.match(/攻击速度\s*[+＋]\s*(\d+(?:\.\d+)?)/);
-  const chargeMatch = description.match(/可充能\s*(\d+)\s*次/);
+  const chargeMatch = description.match(/可(?:以)?充能\s*(\d+)\s*次/);
+  const repeatedTimes = Number(blackboard.multi_times);
+  const repeatedScale = Number(blackboard.multi_atk_scale);
+  if (
+    Number.isInteger(repeatedTimes) &&
+    repeatedTimes >= 2 &&
+    Number.isFinite(repeatedScale) &&
+    repeatedScale > 0 &&
+    blackboardScale > 0
+  ) {
+    resolvedAttackMultiplier =
+      (blackboardScale + repeatedTimes * repeatedScale) /
+      (repeatedTimes + 1);
+  }
+  const hitCountKeys = [
+    'attack@times',
+    'times',
+    'attack@cnt',
+  ];
+  let blackboardHits = hitCountKeys
+    .map((key) => Number(blackboard[key]))
+    .find(
+      (value) =>
+        Number.isInteger(value) &&
+        value >= 2 &&
+        value <= 20,
+    );
+  if (
+    Number.isInteger(repeatedTimes) &&
+    repeatedTimes >= 2 &&
+    Number.isFinite(repeatedScale) &&
+    repeatedScale > 0
+  ) {
+    blackboardHits = repeatedTimes + 1;
+  }
   const numberMap = {
     一: 1,
     两: 2,
@@ -130,14 +205,16 @@ function estimateSkillHints(description = '') {
   const skillHits = Math.max(
     hitMatch ? parseCount(hitMatch[1]) : 1,
     extraHitMatch ? parseCount(extraHitMatch[1]) + 1 : 1,
+    blackboardHits ?? 1,
   );
 
   return {
-    attackMultiplier,
+    attackMultiplier: resolvedAttackMultiplier,
     intervalDelta: interval ? Number(interval[1]) : 0,
     aspd: aspdMatch ? Number(aspdMatch[1]) : 0,
     charges: chargeMatch ? Number(chargeMatch[1]) : 0,
     chargeBased: Boolean(chargeMatch),
+    maxChargeTime,
     skillHits,
   };
 }
@@ -162,11 +239,15 @@ function inferDamageType(trait = '', skillDescription = '') {
 
 function classifySkillOutput(description = '') {
   const text = String(description ?? '');
-  const hasDamage =
-    /(?:造成|打出|命中|使[^。\n]{0,24}受到)[^。\n]{0,30}(?:伤害|损伤)/.test(
+  const redirectsIncomingDamage =
+    /受到[^。\n]{0,24}伤害[^。\n]{0,24}(?:转移|承担|变为[^。\n]{0,12}生命流失)/.test(
       text,
-    ) ||
-    /(?:物理|法术|真实|元素)伤害/.test(text) ||
+    );
+  const hasDamage =
+    (!redirectsIncomingDamage &&
+      /(?:造成|打出|命中|使[^。\n]{0,24}受到|(?:每秒)?受到)[^。\n]{0,30}(?:伤害|损伤)/.test(
+        text,
+      )) ||
     /(?:伤害类型|伤害)(?:变为|转为)/.test(text);
   const stopsAttack = text.includes('停止攻击');
   const healingOnly =

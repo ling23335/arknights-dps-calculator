@@ -243,7 +243,11 @@
       slot.level = levelOrder.find((level) => levels[level]) ?? 'M3';
     }
     const level = levels[slot.level] ?? Object.values(levels).at(-1);
-    const hints = calc.estimateSkillHints(level?.description ?? '');
+    const hints = calc.estimateSkillHints(
+      level?.description ?? '',
+      level?.blackboard ?? {},
+      level?.maxChargeTime ?? 1,
+    );
     slot.activeMultiplier = round(hints.attackMultiplier);
     slot.aspd = hints.aspd;
     slot.intervalDelta = Number.isFinite(level?.intervalDelta)
@@ -1383,6 +1387,12 @@
         <p class="covenant-impact" data-role="trait-impact"></p>
         <p class="covenant-impact" data-role="talent-impact"></p>
         <p class="description" data-role="description"></p>
+        <details class="skill-source">
+          <summary>技能原文与解包参数</summary>
+          <small data-role="skill-id"></small>
+          <p data-role="skill-template"></p>
+          <pre data-role="skill-blackboard"></pre>
+        </details>
         <details class="advanced">
           <summary>高级参数与手动覆盖</summary>
           <div class="advanced-grid">
@@ -1440,6 +1450,15 @@
     const level = findLevel(slot, skill);
     card.querySelector('[data-role="description"]').textContent =
       level?.description || operator.trait;
+    card.querySelector('[data-role="skill-id"]').textContent =
+      `${skill?.skillId || '无技能 ID'} · MaxChargeTime ${level?.maxChargeTime ?? 1}`;
+    card.querySelector('[data-role="skill-template"]').textContent =
+      level?.descriptionTemplate || level?.description || '';
+    const blackboard = level?.blackboard ?? {};
+    card.querySelector('[data-role="skill-blackboard"]').textContent =
+      Object.keys(blackboard).length
+        ? JSON.stringify(blackboard, null, 2)
+        : '该技能等级没有 Blackboard 参数';
     card.querySelector('[data-role="damage-type"]').textContent =
       damageTypes[slot.damageType] ?? slot.damageType;
   }
@@ -2662,7 +2681,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.10 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.11 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),

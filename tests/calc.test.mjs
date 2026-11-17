@@ -165,6 +165,9 @@ test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
   const healing = estimateSkillHints(
     '下次治疗可以恢复相当于攻击力190%的生命；可充能2次',
   );
+  const groupedBuff = estimateSkillHints(
+    '攻击力、防御力和生命上限各+130%',
+  );
 
   assert.deepEqual(
     [amiya.attackMultiplier, amiya.skillHits],
@@ -187,6 +190,66 @@ test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
   assert.equal(lemuen.attackMultiplier, 3.025);
   assert.equal(rampedArts.attackMultiplier, 0.75);
   assert.equal(healing.attackMultiplier, 1);
+  assert.equal(groupedBuff.attackMultiplier, 2.3);
+});
+
+test('skill hints prefer structured local Blackboard values', () => {
+  const amiya = estimateSkillHints(
+    '每次攻击变为攻击力60%的8连发',
+    { 'attack@atk_scale': 0.6, 'attack@times': 8 },
+    1,
+  );
+  const ignition = estimateSkillHints(
+    '下次攻击造成法术伤害；可充能3次',
+    { atk_scale: 1.85, fk: 3.7, ct: 3 },
+    3,
+  );
+  const chargeUp = estimateSkillHints(
+    '攻击力+20%；蓄力额外效果：停顿变为束缚',
+    { atk: 0.2 },
+    2,
+  );
+  const judgment = estimateSkillHints(
+    '造成攻击力300%的伤害，然后快速轰击12次，每次造成攻击力250%的伤害',
+    {
+      atk_scale: 3,
+      multi_atk_scale: 2.5,
+      multi_times: 12,
+    },
+    1,
+  );
+  const logos = estimateSkillHints(
+    '每秒造成伤害',
+    { 'attack@atk_scale_base': 0.75 },
+    1,
+  );
+  const lemuen = estimateSkillHints(
+    '期间攻击力从180%逐渐提升至425%',
+    {
+      'attack@main_atk_scale': 1.8,
+      'attack@fin_atk_scale': 4.25,
+    },
+    1,
+  );
+
+  assert.deepEqual(
+    [amiya.attackMultiplier, amiya.skillHits],
+    [0.6, 8],
+  );
+  assert.deepEqual(
+    [ignition.attackMultiplier, ignition.charges, ignition.chargeBased],
+    [3.7, 3, true],
+  );
+  assert.deepEqual(
+    [chargeUp.charges, chargeUp.chargeBased],
+    [0, false],
+  );
+  assert.deepEqual(
+    [judgment.attackMultiplier, judgment.skillHits],
+    [33 / 13, 13],
+  );
+  assert.equal(logos.attackMultiplier, 0.75);
+  assert.equal(lemuen.attackMultiplier, 3.025);
 });
 
 test('damage type prefers explicit art damage in the skill text', () => {
@@ -215,6 +278,29 @@ test('non-damage and stop-attack skills are classified conservatively', () => {
     hasDamage: false,
     suppressActive: false,
   });
+  assert.deepEqual(
+    classifySkillOutput('屏障能吸收相当于攻击力90%的法术伤害'),
+    {
+      hasDamage: false,
+      suppressActive: true,
+    },
+  );
+  assert.deepEqual(
+    classifySkillOutput('我方单位受到伤害的50%转移给该干员承担'),
+    {
+      hasDamage: false,
+      suppressActive: false,
+    },
+  );
+  assert.deepEqual(
+    classifySkillOutput(
+      '友方干员受到的物理与法术伤害的50%变为持续5秒的生命流失',
+    ),
+    {
+      hasDamage: false,
+      suppressActive: false,
+    },
+  );
 });
 
 test('talent multipliers use multiplication while additive stats accumulate', () => {

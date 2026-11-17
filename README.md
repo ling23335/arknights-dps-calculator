@@ -49,6 +49,7 @@ http://电脑IPv4地址:4173/
 - 可充能瞬时技能按充能次数、技力回复和阻回窗口逐帧处理；点燃可复现高攻速下穿插普攻造成的非单调 DPS。
 - 图表可切换到“灵巧”层数作为横轴；定量分析默认假设灵巧攻速覆盖当前全部方案，用于直接观察点燃充能周期造成的锯齿状 DPS 抖动。
 - 自动估算技能攻击倍率、攻速、攻击间隔、持续时间与回转，并给出击杀时间、命中次数和技能开启次数。
+- 技能倍率与段数优先读取本地 `skill_table` 的 Blackboard；每个技能可展开查看技能 ID、原描述模板和全部解包参数。
 - 可手动覆盖倍率、段数、无视防御、无视法抗和伤害类型。
 - 普通天赋会按本地 Blackboard 自动折算攻击、攻速、回技、初始技力、概率期望、法抗无视和固定附加伤害；阵亡、阻挡、受击、召唤等条件会明确标注为未自动折算。
 - 曲线默认以实际盟约层数作为横轴，展示纯 DPS 增长；敌人保持当前终极数值不变，也可切换为随防御力或法术抗性变化。
@@ -91,9 +92,10 @@ npm run extract:traits
 npm run extract:operators
 npm run extract:modules
 npm run audit:roster
+npm run audit:skills
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计；`audit:skills` 校验全部技能 ID、原描述模板、Blackboard 和逐帧模拟结果。写文件前会校验数量和必填文本。
 
 ## 验证
 

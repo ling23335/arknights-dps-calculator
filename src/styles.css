@@ -1657,6 +1657,38 @@ input[type="search"]:focus {
   margin-top: 10px;
 }
 
+.skill-source {
+  margin: 8px 0 10px;
+}
+
+.skill-source summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.skill-source small,
+.skill-source p,
+.skill-source pre {
+  display: block;
+  margin: 7px 0 0;
+  color: #9aabc0;
+  font-size: 10px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.skill-source pre {
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(129, 153, 181, .16);
+  border-radius: 8px;
+  background: rgba(5, 10, 16, .48);
+  font-family: "Cascadia Code", Consolas, monospace;
+}
+
 .advanced summary {
   color: var(--muted);
   cursor: pointer;

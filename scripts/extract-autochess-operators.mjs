@@ -98,6 +98,7 @@ function extractLevel(level) {
     description: stripMarkup(
       renderTemplate(level.Description, blackboard),
     ),
+    descriptionTemplate: level.Description ?? '',
     initial: level.SpData?.InitSp ?? 0,
     cost: level.SpData?.SpCost ?? 0,
     duration:
@@ -258,6 +259,7 @@ const operators = traits.traits
       const spType = first.SpData?.SpType;
       const trigger = first.SkillType;
       return {
+        skillId: skillRef.SkillId,
         name: first.Name,
         skillType:
           spType === 1

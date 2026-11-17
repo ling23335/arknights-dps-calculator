@@ -29,6 +29,29 @@ test('all local autochess operator talent arrays are present', () => {
   );
 });
 
+test('all local skill levels retain source templates and Blackboard data', () => {
+  const levels = snapshot.operators.flatMap((operator) =>
+    operator.skills.flatMap((skill) => Object.values(skill.levels)),
+  );
+
+  assert.equal(levels.length > 0, true);
+  assert.equal(
+    levels.every(
+      (level) =>
+        typeof level.descriptionTemplate === 'string' &&
+        level.blackboard &&
+        typeof level.blackboard === 'object',
+    ),
+    true,
+  );
+  assert.equal(
+    snapshot.operators
+      .flatMap((operator) => operator.skills)
+      .every((skill) => skill.skillId),
+    true,
+  );
+});
+
 test('Ember talents expose attack and deployment SP effects', () => {
   const attack = maxTalent('char_180_amgoat', '炎息');
   const initialSp = maxTalent('char_180_amgoat', '乱火');

@@ -58,7 +58,10 @@ export function buildRosterAudit() {
     operator.skills.flatMap((skill) => {
       const level =
         skill.levels.M3 ?? Object.values(skill.levels).at(-1);
-      if (!level?.description?.includes('可充能')) return [];
+      const chargeMatch = level?.description?.match(
+        /可(?:以)?充能\s*(\d+)\s*次/,
+      );
+      if (!chargeMatch) return [];
       return [
         {
           operatorId: operator.id,
@@ -66,6 +69,7 @@ export function buildRosterAudit() {
           profession: operator.profession,
           skillName: skill.name,
           skillType: skill.skillType,
+          charges: Number(chargeMatch[1]),
           cost: level.cost,
           maxChargeTime: level.maxChargeTime,
         },
