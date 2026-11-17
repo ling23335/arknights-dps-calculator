@@ -98,3 +98,21 @@ test('ultimate enemy snapshot applies the exact V3_1 mode factors', () => {
   assert.equal(enemy.resistance, 75);
   assert.equal(enemy.baseDefense, 1000);
 });
+
+test('autochess character traits include Ember SP recovery', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/autochess-traits.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const ember = snapshot.traits.find(
+    (trait) => trait.charId === 'char_180_amgoat',
+  );
+
+  assert.equal(snapshot.traitCount, snapshot.traits.length);
+  assert.equal(snapshot.traitCount >= 100, true);
+  assert.equal(ember.bondIds.includes('lethaniaShip'), true);
+  assert.equal(ember.bondIds.includes('arcaneShip'), true);
+  assert.equal(ember.description.includes('技力自然回复速度+0.02/秒'), true);
+});

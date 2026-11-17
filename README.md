@@ -44,6 +44,8 @@ http://电脑IPv4地址:4173/
 - 可直接选用本地解包出的 458 个卫戍协议敌人，并一键停用、改回手动防御与法抗。
 - 默认使用“终极模拟”敌人：模式生命/攻击/防御倍率、攻击 `×5`、防御 `×3`、法抗 `×3`，领袖生命取游戏内终极血量表。
 - 使用 60 帧固定步长逐帧模拟攻击命中、技能开启、技能持续与回转，而非只看平均值公式。
+- 可充能瞬时技能按充能次数、技力回复和阻回窗口逐帧处理；点燃可复现高攻速下穿插普攻造成的非单调 DPS。
+- 图表可切换为“随攻速加成变化”，直接观察点燃充能周期造成的锯齿状 DPS 抖动。
 - 自动估算技能攻击倍率、攻速、攻击间隔、持续时间与回转，并给出击杀时间、命中次数和技能开启次数。
 - 可手动覆盖倍率、段数、无视防御、无视法抗和伤害类型。
 - 曲线默认以实际盟约层数作为横轴，展示纯 DPS 增长；敌人保持当前终极数值不变，也可切换为随防御力或法术抗性变化。
@@ -66,6 +68,8 @@ http://电脑IPv4地址:4173/
 - `data/equipment.js`：供直接打开网页时加载的装备数据副本。
 - `data/commands.json`：本地解包整理后的 74 条指令与协议效果。
 - `data/commands.js`：供直接打开网页时加载的指令数据副本。
+- `data/autochess-traits.json`：143 条卫戍协议干员专属特质。
+- `data/autochess-traits.js`：供直接打开网页时加载的干员特质副本。
 
 重新抓取：
 
@@ -74,9 +78,10 @@ npm install
 npm run refresh
 npm run extract:reference
 npm run extract:ultimate
+npm run extract:traits
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 再应用终极模拟模式倍率与领袖血量表。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:traits` 提取卫戍协议干员专属特质。写文件前会校验数量和必填文本。
 
 ## 验证
 

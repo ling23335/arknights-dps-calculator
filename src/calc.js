@@ -65,11 +65,14 @@ function estimateSkillHints(description = '') {
     /攻击间隔[^。；，,]*[（(]\s*([-+]?\d+(?:\.\d+)?)\s*[）)]/,
   );
   const aspdMatch = description.match(/攻击速度\s*[+＋]\s*(\d+(?:\.\d+)?)/);
+  const chargeMatch = description.match(/可充能\s*(\d+)\s*次/);
 
   return {
     attackMultiplier,
     intervalDelta: interval ? Number(interval[1]) : 0,
     aspd: aspdMatch ? Number(aspdMatch[1]) : 0,
+    charges: chargeMatch ? Number(chargeMatch[1]) : 0,
+    chargeBased: Boolean(chargeMatch),
   };
 }
 
@@ -167,6 +170,7 @@ function simulateFrameDps({
   resistanceIgnore = 0,
   defensePenetration = 0,
   resistancePenetration = 0,
+  sp = null,
   tick = 1 / 60,
   horizon = 120,
 }) {
@@ -200,6 +204,143 @@ function simulateFrameDps({
       damageType,
       mitigatedEnemy,
     ) * Math.max(1, skillHits);
+
+  if (sp?.maxCharges > 0) {
+    const cost = Math.max(epsilon, Number(sp.cost) || 1);
+    const maxCharges = Math.max(1, Number(sp.maxCharges) || 1);
+    const storedCap = cost * maxCharges;
+    const frameRate = Math.max(1, Number(sp.frameRate) || 30);
+    const blockSeconds = Math.max(
+      0,
+      Number(sp.blockFrames) || 0,
+    ) / frameRate;
+    let storedSp = Math.min(
+      storedCap,
+      Math.max(0, Number(sp.initial) || 0),
+    );
+    let blockUntil = 0;
+    let lastTime = 0;
+    let time = 0;
+    let nextAttack = normalInterval;
+    let activeRemaining = 0;
+    let normalTime = 0;
+    let activeTime = 0;
+    let normalDamage = 0;
+    let activeDamage = 0;
+    let normalHitCount = 0;
+    let activeHitCount = 0;
+    let skillCasts = 0;
+    let remainingHp = Number.isFinite(enemy.hp)
+      ? Math.max(0, enemy.hp)
+      : Infinity;
+    let killTime = null;
+
+    for (
+      let frame = 0;
+      frame < maxTicks && time < horizon;
+      frame += 1
+    ) {
+      const dt = Math.min(step, horizon - time);
+      time += dt;
+      if (activeRemaining > 0) {
+        activeTime += dt;
+        activeRemaining = Math.max(0, activeRemaining - dt);
+      } else {
+        normalTime += dt;
+      }
+      if (
+        activeRemaining <= epsilon &&
+        sp.mode === 'natural' &&
+        time > blockUntil
+      ) {
+        storedSp = Math.min(
+          storedCap,
+          storedSp +
+            Math.max(0, Number(sp.perSecond) || 0) *
+              Math.max(0, time - Math.max(lastTime, blockUntil)),
+        );
+      }
+
+      while (nextAttack <= time + epsilon && remainingHp > 0) {
+        let charged = activeRemaining > epsilon;
+        if (!charged && storedSp >= cost - epsilon) {
+          storedSp = Math.max(0, storedSp - cost);
+          skillCasts += 1;
+          activeRemaining = Math.max(0, duration);
+          charged = true;
+          if (duration <= epsilon) {
+            blockUntil = time + Math.min(blockSeconds, normalInterval);
+          }
+        }
+        const rawHit = charged ? activeHit : normalHit;
+        const appliedHit = Math.min(remainingHp, rawHit);
+        remainingHp = Math.max(0, remainingHp - appliedHit);
+        if (charged) {
+          activeDamage += appliedHit;
+          activeHitCount += 1;
+        } else {
+          normalDamage += appliedHit;
+          normalHitCount += 1;
+          if (sp.mode === 'attack') {
+            storedSp = Math.min(
+              storedCap,
+              storedSp + Math.max(0, Number(sp.perAttack) || 0),
+            );
+          }
+        }
+        nextAttack += charged ? activeInterval : normalInterval;
+        if (remainingHp <= epsilon) {
+          killTime = time;
+          break;
+        }
+      }
+      lastTime = time;
+      if (remainingHp <= epsilon) break;
+    }
+
+    const totalDamage = normalDamage + activeDamage;
+    const measuredTime = Number((killTime ?? time).toFixed(6));
+    const totalHits = normalHitCount + activeHitCount;
+    return {
+      effectiveAttack,
+      normalInterval,
+      activeInterval: normalInterval,
+      normalHit,
+      activeHit,
+      normalDps: normalTime > 0 ? normalDamage / normalTime : 0,
+      activeDps: activeTime > 0 ? activeDamage / activeTime : 0,
+      cycleDps: measuredTime > 0 ? totalDamage / measuredTime : 0,
+      dps: measuredTime > 0 ? totalDamage / measuredTime : 0,
+      totalDamage,
+      normalDamage,
+      activeDamage,
+      normalHits: normalHitCount,
+      skillHits: activeHitCount,
+      skillCasts,
+      activeTime,
+      normalTime,
+      readyTime: skillCasts > 0 ? normalTime / skillCasts : 0,
+      skillUptime:
+        duration > epsilon
+          ? measuredTime > 0
+            ? activeTime / measuredTime
+            : 0
+          : totalHits > 0
+            ? activeHitCount / totalHits
+            : 0,
+      ticks: Math.round(measuredTime / step),
+      killTime: killTime === null ? null : measuredTime,
+      remainingHp,
+      horizon,
+      tick: step,
+      storedSp,
+      chargesAvailable: Math.floor(storedSp / cost),
+      blockSeconds: Math.min(blockSeconds, normalInterval),
+      spPerSecond: Math.max(0, Number(sp.perSecond) || 0),
+      spCost: cost,
+      maxCharges,
+    };
+  }
 
   let time = 0;
   let nextAttack = normalInterval;
@@ -308,6 +449,36 @@ function matchOperatorName(names, query) {
     normalized.find((item) => item.value.includes(normalizedQuery))?.name ??
     ''
   );
+}
+
+function evaluateAutoChessTrait(description = '', bondLayers = []) {
+  const text = String(description ?? '');
+  const totalLayers = bondLayers.reduce(
+    (sum, value) => sum + Math.max(0, Number(value) || 0),
+    0,
+  );
+  const spMatch = text.match(
+    /每叠加\s*(\d+)\s*层[^。\n]*?技力自然回复速度\s*\+\s*([\d.]+)/,
+  );
+  const attackMatch = text.match(
+    /每叠加\s*(\d+)\s*层[^。\n]*?攻击力\s*\+\s*(\d+(?:\.\d+)?)%/,
+  );
+  const aspdMatch = text.match(
+    /每叠加\s*(\d+)\s*层[^。\n]*?攻击速度\s*\+\s*(\d+(?:\.\d+)?)/,
+  );
+  const step = Number(
+    spMatch?.[1] ?? attackMatch?.[1] ?? aspdMatch?.[1] ?? 1,
+  );
+  const stacks = Math.floor(totalLayers / Math.max(1, step));
+  return {
+    totalLayers,
+    stacks,
+    effects: {
+      spPerSecond: stacks * Number(spMatch?.[2] ?? 0),
+      attackBonus: stacks * Number(attackMatch?.[2] ?? 0),
+      aspd: stacks * Number(aspdMatch?.[2] ?? 0),
+    },
+  };
 }
 
 function evaluateCovenant(bond, layer = 0, memberCount = 0) {
@@ -632,5 +803,6 @@ globalThis.ArkCalc = {
   calculateDpsModel,
   simulateFrameDps,
   matchOperatorName,
+  evaluateAutoChessTrait,
   evaluateCovenant,
 };

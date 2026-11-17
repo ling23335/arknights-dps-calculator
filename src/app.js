@@ -6,6 +6,7 @@
   const enemySnapshot = window.ARK_ENEMY_SNAPSHOT;
   const equipmentSnapshot = window.ARK_EQUIPMENT_SNAPSHOT;
   const commandSnapshot = window.ARK_COMMANDS_SNAPSHOT;
+  const traitSnapshot = window.ARK_AUTOCHESS_TRAITS_SNAPSHOT;
   const calc = window.ArkCalc;
   if (
     !snapshot?.operators?.length ||
@@ -13,6 +14,7 @@
     !enemySnapshot?.enemies?.length ||
     !equipmentSnapshot?.equipment?.length ||
     !commandSnapshot?.commands?.length ||
+    !traitSnapshot?.traits?.length ||
     !calc
   ) {
     document.body.innerHTML =
@@ -35,6 +37,9 @@
   const commands = commandSnapshot.commands;
   const commandMap = new Map(
     commands.map((command) => [command.id, command]),
+  );
+  const traitMap = new Map(
+    traitSnapshot.traits.map((trait) => [trait.charId, trait]),
   );
   const defaultEnemyId = 'enemy_9013_acstmk';
   const colorList = [
@@ -183,6 +188,11 @@
       intervalDelta: 0,
       duration: 0,
       cooldown: 0,
+      charges: 1,
+      chargeBased: false,
+      spCost: 0,
+      spInitial: 0,
+      spMode: 'natural',
       normalHits: 1,
       skillHits: 1,
       defenseIgnore: 0,
@@ -206,6 +216,11 @@
       slot.intervalDelta = 0;
       slot.duration = 0;
       slot.cooldown = 0;
+      slot.charges = 1;
+      slot.chargeBased = false;
+      slot.spCost = 0;
+      slot.spInitial = 0;
+      slot.spMode = 'natural';
       slot.damageType = calc.inferDamageType(operator.trait, '');
       return;
     }
@@ -219,6 +234,16 @@
     slot.aspd = hints.aspd;
     slot.intervalDelta = hints.intervalDelta;
     slot.duration = level?.duration ?? 0;
+    slot.charges = hints.charges || 1;
+    slot.chargeBased = Boolean(hints.chargeBased);
+    slot.spCost = level?.cost ?? 0;
+    slot.spInitial = level?.initial ?? 0;
+    slot.spMode =
+      skill.skillType === '攻击回复'
+        ? 'attack'
+        : skill.skillType === '自动回复'
+          ? 'natural'
+          : 'none';
     slot.cooldown = Math.max(
       0,
       (level?.cost ?? 0) - (level?.initial ?? 0),
@@ -358,6 +383,32 @@
       effects,
       equipment: selectedEquipment || null,
       commands: state.commands.enabled ? appliedCommands : [],
+    };
+  }
+
+  function combineAutoChessTrait(slot) {
+    const operator = findOperator(slot);
+    const trait = traitMap.get(operator.id);
+    if (!trait) {
+      return {
+        trait: null,
+        totalLayers: 0,
+        stacks: 0,
+        effects: { spPerSecond: 0, attackBonus: 0, aspd: 0 },
+      };
+    }
+    const selected = new Set(
+      state.covenants.enabled ? state.covenants.selectedIds : [],
+    );
+    const layers = trait.bondIds
+      .filter((bondId) => selected.has(bondId))
+      .map(
+        (bondId) =>
+          state.covenants.settings[bondId]?.layer ?? 0,
+      );
+    return {
+      trait,
+      ...calc.evaluateAutoChessTrait(trait.description, layers),
     };
   }
 
@@ -1045,6 +1096,7 @@
         <p class="simulation-detail" data-role="simulation-detail"></p>
         <p class="covenant-impact" data-role="covenant-impact"></p>
         <p class="covenant-impact" data-role="reference-impact"></p>
+        <p class="covenant-impact" data-role="trait-impact"></p>
         <p class="description" data-role="description"></p>
         <details class="advanced">
           <summary>高级参数与手动覆盖</summary>
@@ -1118,6 +1170,7 @@
     slot,
     enemy = state.enemy,
     covenantLayerCap = null,
+    aspdOverride = null,
   ) {
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
@@ -1131,6 +1184,17 @@
     const covenantEffects = covenant.effects;
     const reference = combineReferenceEffects(slot);
     const referenceEffects = reference.effects;
+    const autochessTrait = combineAutoChessTrait(slot);
+    const traitEffects = autochessTrait.effects;
+    const chargeBased = slot.chargeBased && slot.duration <= 0;
+    const useSpState =
+      slot.spMode === 'natural' || slot.spMode === 'attack';
+    const totalAspd =
+      slot.aspd +
+      covenantEffects.aspd +
+      referenceEffects.aspd +
+      traitEffects.aspd +
+      (aspdOverride ?? 0);
     const instantWindow = Math.max(
       0.05,
       stats.attackInterval + slot.intervalDelta,
@@ -1149,7 +1213,8 @@
       attackBonus:
         slot.attackBonus +
         covenantEffects.attackBonus +
-        referenceEffects.attackBonus,
+        referenceEffects.attackBonus +
+        traitEffects.attackBonus,
       normalMultiplier:
         slot.normalMultiplier * covenantEffects.damageMultiplier +
         covenantEffects.extraDamageMultiplier +
@@ -1160,7 +1225,8 @@
           (1 + covenantEffects.activeAttackBonus / 100) +
         covenantEffects.extraDamageMultiplier +
         referenceEffects.extraDamageMultiplier,
-      aspd: slot.aspd + covenantEffects.aspd + referenceEffects.aspd,
+      normalAspd: chargeBased ? totalAspd : 0,
+      aspd: chargeBased ? 0 : totalAspd,
       intervalDelta: slot.intervalDelta,
       normalHits: slot.normalHits,
       skillHits: slot.skillHits,
@@ -1182,6 +1248,22 @@
       ),
       tick: 1 / 60,
       horizon: 120,
+      sp:
+        useSpState
+          ? {
+              mode: slot.spMode,
+              cost:
+                slot.spCost *
+                covenantEffects.spCostMultiplier *
+                referenceEffects.spCostMultiplier,
+              initial: slot.spInitial + covenantEffects.initialSp,
+              perSecond: 1 + traitEffects.spPerSecond,
+              perAttack: 1,
+              maxCharges: chargeBased ? slot.charges : 1,
+              blockFrames: chargeBased ? 36 : 0,
+              frameRate: 30,
+            }
+          : null,
     });
     return {
       slot,
@@ -1193,6 +1275,9 @@
       result,
       covenant,
       reference,
+      autochessTrait,
+      totalAspd,
+      chargeBased,
     };
   }
 
@@ -1246,6 +1331,21 @@
     const effects = referenceStatChips(reference.effects);
     if (effects.length) parts.push(effects.join(' · '));
     return parts.length ? parts.join(' · ') : '未启用装备或指令修正';
+  }
+
+  function autoChessTraitSummary(info) {
+    if (!info?.trait || !info.stacks) return '';
+    const parts = [`${info.trait.name} ${info.totalLayers} 层`];
+    if (info.effects.spPerSecond) {
+      parts.push(`技力回复 +${decimal.format(info.effects.spPerSecond)}/秒`);
+    }
+    if (info.effects.attackBonus) {
+      parts.push(`攻击 +${decimal.format(info.effects.attackBonus)}%`);
+    }
+    if (info.effects.aspd) {
+      parts.push(`攻速 +${decimal.format(info.effects.aspd)}`);
+    }
+    return parts.join(' · ');
   }
 
   function formatKillDuration(seconds) {
@@ -1342,13 +1442,19 @@
           ? '> 120s'
           : `${decimal.format(item.result.killTime)}s`;
       card.querySelector('[data-role="simulation-detail"]').textContent =
-        `1/60 秒步长 · ${number.format(item.result.ticks)} 帧 · 普攻 ${item.result.normalHits} 次 / 技能 ${item.result.skillHits} 次 · 开技能 ${item.result.skillCasts} 次`;
+        `1/60 秒步长 · ${number.format(item.result.ticks)} 帧 · 普攻 ${item.result.normalHits} 次 / 技能 ${item.result.skillHits} 次 · 开技能 ${item.result.skillCasts} 次${
+          item.chargeBased
+            ? ` · ${item.slot.charges} 充能 · 阻回 ${decimal.format((item.result.blockSeconds ?? 0) * 30)} 帧`
+            : ''
+        }${item.result.spPerSecond ? ` · 回技 ${decimal.format(item.result.spPerSecond)}/秒` : ''}`;
       card.querySelector('[data-role="damage-type"]').textContent =
         damageTypes[item.slot.damageType] ?? item.slot.damageType;
       card.querySelector('[data-role="covenant-impact"]').textContent =
         covenantSummary(item.covenant);
       card.querySelector('[data-role="reference-impact"]').textContent =
         referenceSummary(item.reference);
+      card.querySelector('[data-role="trait-impact"]').textContent =
+        autoChessTraitSummary(item.autochessTrait);
     });
 
     document.querySelector('#result-body').innerHTML = results
@@ -1369,7 +1475,11 @@
             <td>${item.result.killTime === null ? '&gt; 120s' : `${decimal.format(item.result.killTime)}s`}</td>
             <td>${decimal.format(item.result.normalInterval)}s</td>
             <td>${escapeHtml(covenantSummary(item.covenant))}</td>
-            <td>${escapeHtml(referenceSummary(item.reference))}</td>
+            <td>${escapeHtml(referenceSummary(item.reference))}${
+              autoChessTraitSummary(item.autochessTrait)
+                ? `<br>${escapeHtml(autoChessTraitSummary(item.autochessTrait))}`
+                : ''
+            }</td>
             <td>${decimal.format(uptime)}%</td>
           </tr>`;
       })
@@ -1400,6 +1510,9 @@
       if (samples.at(-1) !== maxLayer) samples.push(maxLayer);
       return samples;
     }
+    if (state.axis === 'aspd') {
+      return Array.from({ length: 201 }, (_, index) => index);
+    }
     if (state.axis === 'res') {
       return Array.from({ length: 96 }, (_, index) => index);
     }
@@ -1427,11 +1540,14 @@
     const plotWidth = width - margin.left - margin.right;
     const plotHeight = height - margin.top - margin.bottom;
     const xs = chartSamples();
+    const aspdAxis = state.axis === 'aspd';
     const series = state.slots.map((slot) => ({
       name: `${findOperator(slot).name} · ${findSkill(slot)?.name ?? '普攻'}`,
       values: xs.map((value) =>
         covenantAxis
           ? calculateSlot(slot, state.enemy, value)
+          : aspdAxis
+            ? calculateSlot(slot, state.enemy, null, value)
           : calculateSlot(slot, { ...state.enemy, [state.axis]: value }),
       ),
       color: colorList[state.slots.indexOf(slot)].line,
@@ -1474,6 +1590,8 @@
       ctx.fillText(
         covenantAxis
           ? `${xs[index]}层`
+          : aspdAxis
+            ? `+${xs[index]}`
           : state.axis === 'res'
             ? `${xs[index]}%`
             : number.format(xs[index]),
@@ -1501,6 +1619,14 @@
 
     const currentIndex = covenantAxis
       ? xs.length - 1
+      : aspdAxis
+        ? Math.max(
+            0,
+            Math.min(
+              xs.length - 1,
+              Math.round(lastResults[0]?.totalAspd ?? 0),
+            ),
+          )
       : state.axis === 'res'
         ? Math.max(0, Math.min(xs.length - 1, state.enemy.res))
         : Math.round(
@@ -1538,7 +1664,7 @@
       }
     }
 
-    if (covenantAxis) {
+    if (covenantAxis || aspdAxis) {
       const enemy = enemyMap.get(state.enemy.selectedId);
       ctx.fillStyle = '#8fa0b5';
       ctx.textAlign = 'left';
@@ -1566,6 +1692,8 @@
     document.querySelector('#chart-title').textContent =
       covenantAxis
         ? `纯逐帧 DPS · 扫描${focusedCovenant()?.name ?? '盟约'}层数`
+        : aspdAxis
+          ? '纯逐帧 DPS · 随攻速加成变化'
         : state.axis === 'res'
         ? '逐帧平均 DPS · 随法术抗性变化'
         : '逐帧平均 DPS · 随防御力变化';
@@ -2088,6 +2216,8 @@
     const xLabel =
       state.axis === 'covenant'
         ? `${focusedCovenant()?.name ?? '盟约'} ${value} 层${index === chartModel.xs.length - 1 ? ' · 当前配置' : ''}`
+        : state.axis === 'aspd'
+          ? `攻击速度 +${value}`
         : state.axis === 'res'
           ? `${value}% 法抗`
           : `${number.format(value)} 防御`;

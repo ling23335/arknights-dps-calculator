@@ -83,6 +83,7 @@
             </span>
             <select id="chart-axis">
               <option value="covenant" selected>扫描所选盟约层数</option>
+              <option value="aspd">随攻速加成变化</option>
               <option value="def">随防御力变化</option>
               <option value="res">随法术抗性变化</option>
             </select>
@@ -106,6 +107,7 @@
               <p><b>物理</b> max(攻击 - 防御, 攻击 × 5%)</p>
               <p><b>法术</b> 攻击 × (1 - 法抗)，最低保留 5%</p>
               <p><b>逐帧</b> 以 1/60 秒为步长推进攻击、技能持续和回转，按实际命中事件累计伤害与击杀时间。</p>
+              <p><b>充能</b> 可充能技能逐个消耗存量；点燃每次消耗后进入 36 帧与当前攻击间隔的较小值作为阻回时间。</p>
               <p><b>终极敌人</b> 应用终极模拟模式倍率；领袖生命取本地游戏终极血量表，不使用基础敌人面板。</p>
               <p><b>盟约</b> 数据来自本地热更新；干员只自动应用其实际所属且达到激活人数的盟约。</p>
               <p>召唤物、随机目标、多段命中和特殊状态无法由文本稳定推断，使用“高级参数”手动覆盖。</p>
@@ -355,6 +357,7 @@
   <script src="data/enemies.js"></script>
   <script src="data/equipment.js"></script>
   <script src="data/commands.js"></script>
+  <script src="data/autochess-traits.js"></script>
   <script src="src/calc.js"></script>
   <script src="src/app.js"></script>
 </body>

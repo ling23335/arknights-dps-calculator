@@ -12,6 +12,7 @@ const {
   inferDamageType,
   matchOperatorName,
   evaluateCovenant,
+  evaluateAutoChessTrait,
 } = globalThis.ArkCalc;
 import { parseOperatorWikitext } from '../src/prts-parser.js';
 
@@ -123,6 +124,15 @@ test('skill hints extract attack speed bonus', () => {
   const hints = estimateSkillHints('攻击速度+60，攻击力+60%');
 
   assert.equal(hints.aspd, 60);
+});
+
+test('skill hints extract stored charge count', () => {
+  const hints = estimateSkillHints(
+    '下次攻击造成相当于攻击力370%的法术伤害\n可充能3次',
+  );
+
+  assert.equal(hints.charges, 3);
+  assert.equal(hints.chargeBased, true);
 });
 
 test('damage type prefers explicit art damage in the skill text', () => {
@@ -291,6 +301,77 @@ test('instant skills can recharge after their triggering attack', () => {
 
   assert.equal(result.skillCasts >= 3, true);
   assert.equal(result.activeDamage > result.normalDamage, true);
+});
+
+test('charged instant skills use SP recovery blocks and can lower DPS at high attack speed', () => {
+  const simulate = (normalAspd) =>
+    simulateFrameDps({
+      attack: 100,
+      baseInterval: 1.6,
+      damageType: 'true',
+      enemy: { def: 0, res: 0, hp: Infinity },
+      normalAspd,
+      activeMultiplier: 4,
+      duration: 0,
+      tick: 1 / 60,
+      horizon: 60,
+      sp: {
+        mode: 'natural',
+        cost: 5,
+        initial: 0,
+        perSecond: 10,
+        maxCharges: 3,
+        blockFrames: 36,
+        frameRate: 30,
+      },
+    });
+
+  const slow = simulate(17);
+  const fast = simulate(18);
+
+  assert.equal(slow.skillCasts > fast.skillCasts, true);
+  assert.equal(slow.cycleDps > fast.cycleDps, true);
+});
+
+test('natural SP recovery accelerates duration skills through the same state machine', () => {
+  const simulate = (perSecond) =>
+    simulateFrameDps({
+      attack: 100,
+      baseInterval: 1,
+      damageType: 'true',
+      enemy: { def: 0, res: 0, hp: Infinity },
+      activeMultiplier: 2,
+      duration: 5,
+      tick: 1 / 60,
+      horizon: 60,
+      sp: {
+        mode: 'natural',
+        cost: 10,
+        initial: 0,
+        perSecond,
+        maxCharges: 1,
+        blockFrames: 0,
+        frameRate: 30,
+      },
+    });
+
+  const slow = simulate(1);
+  const fast = simulate(2);
+  assert.equal(fast.skillCasts > slow.skillCasts, true);
+  assert.equal(fast.cycleDps > slow.cycleDps, true);
+  assert.equal(fast.skillCasts <= 7, true);
+  assert.equal(fast.activeTime <= 35, true);
+});
+
+test('autochess character trait scales SP recovery and attack by layer blocks', () => {
+  const result = evaluateAutoChessTrait(
+    '【莱塔尼亚】【奥术】每叠加2层，本干员技力自然回复速度+0.02/秒，攻击力+1%',
+    [100, 50],
+  );
+
+  assert.equal(result.effects.spPerSecond, 1.5);
+  assert.equal(result.effects.attackBonus, 75);
+  assert.equal(result.stacks, 75);
 });
 
 test('all 26 local covenants provide an effect summary', () => {
