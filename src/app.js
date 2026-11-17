@@ -685,11 +685,15 @@
       </label>
       <div class="chart-axis-presets">
         <button type="button" data-chart-axis-preset="covenant">盟约增长</button>
-        <button type="button" data-chart-axis-preset="skillfulShip">灵巧抖动</button>
+        <button type="button" data-chart-axis-preset="trait">特质回技</button>
+        <button type="button" data-chart-axis-preset="skillfulShip">灵巧攻速</button>
       </div>
       <p class="chart-axis-hint">${
         state.axis === 'covenant' && focused?.bondId === 'skillfulShip'
           ? '当前扫描灵巧层数，并按定量分析假设灵巧攻速覆盖全部方案。'
+          : state.axis === 'covenant' &&
+              ['lethaniaShip', 'arcaneShip'].includes(focused?.bondId)
+            ? '此轴也会改变干员卫戍特质提供的自然回技；阻回始终按 min(36帧, 攻击间隔) 生效。'
           : state.axis === 'covenant'
             ? '盟约横轴用于观察单条盟约提升时的整体 DPS 增长。'
             : '当前横轴为敌人参数。'
@@ -1525,7 +1529,7 @@
         1,
         focus ? state.covenants.settings[focus.bondId]?.layer ?? 0 : 1,
       );
-      const step = Math.max(1, Math.ceil(maxLayer / 250));
+      const step = 1;
       const samples = [];
       for (let layer = 0; layer <= maxLayer; layer += step) {
         samples.push(layer);
@@ -1877,6 +1881,9 @@
       if (value === 'skillfulShip') {
         state.axis = 'covenant';
         state.chartCovenantId = 'skillfulShip';
+      } else if (value === 'trait') {
+        state.axis = 'covenant';
+        state.chartCovenantId = 'lethaniaShip';
       } else {
         state.axis = 'covenant';
       }
@@ -2267,7 +2274,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.4 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.5 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
