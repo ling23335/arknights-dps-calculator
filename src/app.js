@@ -63,6 +63,7 @@
       selectedId: defaultEnemyId,
     },
     axis: 'covenant',
+    chartCovenantId: defaultCovenantIds[0],
     killLimit: 5,
     slots: [],
     equipment: {
@@ -121,6 +122,7 @@
   const tooltip = document.querySelector('#tooltip');
   let chartModel = null;
   let lastResults = [];
+  let chartControlTimer = null;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -373,6 +375,16 @@
       .filter(Boolean);
   }
 
+  function focusedCovenant() {
+    const bands = selectedBonds();
+    let bond = bands.find((item) => item.bondId === state.chartCovenantId);
+    if (!bond && bands.length) {
+      bond = bands[0];
+      state.chartCovenantId = bond.bondId;
+    }
+    return bond ?? null;
+  }
+
   function bondMatchesOperator(bond, operator) {
     return bond.members.some(
       (member) => member.charId === operator.id || member.name === operator.name,
@@ -396,7 +408,7 @@
       damageReduction: 0,
     };
     const applied = [];
-    if (!state.covenants.enabled || layerCap === 0) {
+    if (!state.covenants.enabled) {
       return { effects, applied };
     }
     const operator = findOperator(slot);
@@ -405,9 +417,16 @@
       const settings = state.covenants.settings[bond.bondId];
       if (!settings || !bondMatchesOperator(bond, operator)) continue;
       const effectiveLayer =
-        layerCap === null
+        layerCap === null || bond.bondId !== state.chartCovenantId
           ? settings.layer
           : Math.min(settings.layer, Math.max(0, layerCap));
+      if (
+        layerCap !== null &&
+        bond.bondId === state.chartCovenantId &&
+        effectiveLayer <= 0
+      ) {
+        continue;
+      }
       const evaluation = calc.evaluateCovenant(
         bond,
         effectiveLayer,
@@ -593,11 +612,59 @@
     renderCovenantBrowser();
     renderSelectedCovenants();
     renderCovenantSummary();
+    renderChartCovenantControls();
+  }
+
+  function renderChartCovenantControls() {
+    const container = document.querySelector('#chart-covenant-controls');
+    const bonds = selectedBonds();
+    const focused = focusedCovenant();
+    if (!bonds.length) {
+      container.innerHTML =
+        '<h3>横轴盟约</h3><p>当前没有可分析的盟约。</p>';
+      return;
+    }
+    container.innerHTML = `
+      <h3>横轴盟约</h3>
+      <p>选择一条盟约扫描层数，其他盟约保持当前值不变。</p>
+      <div class="chart-covenant-list">
+        ${bonds
+          .map((bond) => {
+            const layer =
+              state.covenants.settings[bond.bondId]?.layer ?? 0;
+            const isFocused = bond.bondId === focused?.bondId;
+            const matchedSlots = state.slots.flatMap((slot, index) =>
+              bondMatchesOperator(bond, findOperator(slot)) ? [index] : [],
+            );
+            return `
+              <article class="chart-covenant-row ${isFocused ? 'focused' : ''}">
+                <div class="chart-covenant-choice">
+                  <label>
+                    <input type="radio" name="chart-covenant-axis" value="${escapeHtml(bond.bondId)}"${isFocused ? ' checked' : ''}>
+                    <span>${escapeHtml(bond.name)}</span>
+                  </label>
+                  <span class="chart-layer-input">
+                    <input class="chart-covenant-number" type="number" min="0" max="999" step="1" value="${layer}" data-chart-covenant-layer="${escapeHtml(bond.bondId)}" aria-label="${escapeHtml(bond.name)}层数输入">
+                    <small>层</small>
+                  </span>
+                </div>
+                <input type="range" min="0" max="999" step="1" value="${layer}" data-chart-covenant-layer="${escapeHtml(bond.bondId)}" aria-label="${escapeHtml(bond.name)}层数">
+                <small class="chart-covenant-impact">${
+                  matchedSlots.length
+                    ? `作用于方案 ${matchedSlots.map((index) => String.fromCharCode(65 + index)).join('/')}`
+                    : '不影响当前方案'
+                }</small>
+              </article>`;
+          })
+          .join('')}
+      </div>
+      <p class="chart-covenant-note">横轴范围会随所选盟约的当前层数切换；调整滑块会同时更新正式推演。</p>`;
   }
 
   function resetCovenants() {
     state.covenants.enabled = true;
     state.covenants.selectedIds = [...defaultCovenantIds];
+    state.chartCovenantId = defaultCovenantIds[0];
     state.covenants.settings = Object.fromEntries(
       covenants.map((bond) => [
         bond.bondId,
@@ -1249,6 +1316,16 @@
   function updateResults() {
     const results = state.slots.map((slot) => calculateSlot(slot));
     lastResults = results;
+    document.querySelector('#chart-metrics').innerHTML = results
+      .map(
+        (item, index) => `
+          <article class="chart-metric" style="--metric-color:${colorList[index].line}">
+            <span>方案 ${String.fromCharCode(65 + index)} · ${escapeHtml(item.operator.name)}</span>
+            <strong>${number.format(item.result.cycleDps)}</strong>
+            <small>${escapeHtml(item.skill?.name ?? '仅普攻')} · 普攻 ${item.result.normalHits} / 技能 ${item.result.skillHits} 次</small>
+          </article>`,
+      )
+      .join('');
     results.forEach((item, index) => {
       const card = slotsElement.querySelector(`[data-slot="${index}"]`);
       card.querySelector('[data-role="cycle"]').textContent = number.format(
@@ -1310,19 +1387,18 @@
 
   function chartSamples() {
     if (state.axis === 'covenant') {
+      const focus = focusedCovenant();
       const maxLayer = Math.max(
         1,
-        ...selectedBonds().map(
-          (bond) => state.covenants.settings[bond.bondId]?.layer ?? 0,
-        ),
+        focus ? state.covenants.settings[focus.bondId]?.layer ?? 0 : 1,
       );
-      return [
-        ...new Set(
-          Array.from({ length: 21 }, (_, index) =>
-            Math.round((index * maxLayer) / 20),
-          ),
-        ),
-      ];
+      const step = Math.max(1, Math.ceil(maxLayer / 250));
+      const samples = [];
+      for (let layer = 0; layer <= maxLayer; layer += step) {
+        samples.push(layer);
+      }
+      if (samples.at(-1) !== maxLayer) samples.push(maxLayer);
+      return samples;
     }
     if (state.axis === 'res') {
       return Array.from({ length: 96 }, (_, index) => index);
@@ -1489,7 +1565,7 @@
       .join('');
     document.querySelector('#chart-title').textContent =
       covenantAxis
-        ? '纯逐帧 DPS · 随盟约层数增长'
+        ? `纯逐帧 DPS · 扫描${focusedCovenant()?.name ?? '盟约'}层数`
         : state.axis === 'res'
         ? '逐帧平均 DPS · 随法术抗性变化'
         : '逐帧平均 DPS · 随防御力变化';
@@ -1519,6 +1595,7 @@
       refreshSlot(index);
       renderCovenantSummary();
       renderSelectedCovenants();
+      renderChartCovenantControls();
     }
 
     const handle = (event) => {
@@ -1635,7 +1712,40 @@
       }
       renderSelectedCovenants();
       renderCovenantSummary();
+      renderChartCovenantControls();
       updateResults();
+    });
+    const chartControls = document.querySelector(
+      '#chart-covenant-controls',
+    );
+    chartControls.addEventListener('change', (event) => {
+      if (event.target.name === 'chart-covenant-axis') {
+        clearTimeout(chartControlTimer);
+        state.chartCovenantId = event.target.value;
+        renderChartCovenantControls();
+        updateResults();
+      } else if (event.target.dataset.chartCovenantLayer) {
+        clearTimeout(chartControlTimer);
+        renderSelectedCovenants();
+        renderCovenantSummary();
+        updateResults();
+      }
+    });
+    chartControls.addEventListener('input', (event) => {
+      const bondId = event.target.dataset.chartCovenantLayer;
+      if (!bondId) return;
+      const settings = state.covenants.settings[bondId];
+      if (!settings) return;
+      settings.layer = Math.max(0, Number(event.target.value) || 0);
+      const row = event.target.closest('.chart-covenant-row');
+      row
+        ?.querySelectorAll('[data-chart-covenant-layer]')
+        .forEach((input) => {
+          if (input !== event.target) input.value = settings.layer;
+        });
+      renderCovenantSummary();
+      clearTimeout(chartControlTimer);
+      chartControlTimer = setTimeout(updateResults, 80);
     });
   }
 
@@ -1977,7 +2087,7 @@
     tooltip.style.top = `${chartModel.margin.top + 14}px`;
     const xLabel =
       state.axis === 'covenant'
-        ? `${value} 层盟约${index === chartModel.xs.length - 1 ? ' · 终极模拟' : ''}`
+        ? `${focusedCovenant()?.name ?? '盟约'} ${value} 层${index === chartModel.xs.length - 1 ? ' · 当前配置' : ''}`
         : state.axis === 'res'
           ? `${value}% 法抗`
           : `${number.format(value)} 防御`;

@@ -82,7 +82,7 @@
               <span>曲线横轴</span>
             </span>
             <select id="chart-axis">
-              <option value="covenant" selected>随盟约层数增长</option>
+              <option value="covenant" selected>扫描所选盟约层数</option>
               <option value="def">随防御力变化</option>
               <option value="res">随法术抗性变化</option>
             </select>
@@ -130,11 +130,17 @@
             </div>
           </div>
           <div class="module-body">
-            <div class="chart-wrap">
-              <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约层数增长的曲线"></canvas>
-              <div id="tooltip" class="tooltip" hidden></div>
+            <div class="chart-workbench">
+              <aside id="chart-covenant-controls" class="chart-covenant-controls" aria-label="盟约横轴与层数"></aside>
+              <div class="chart-main">
+                <div id="chart-metrics" class="chart-metrics"></div>
+                <div class="chart-wrap">
+                  <canvas id="chart" role="img" aria-label="不同干员 60 帧逐帧模拟平均 DPS 随盟约层数增长的曲线"></canvas>
+                  <div id="tooltip" class="tooltip" hidden></div>
+                </div>
+                <div id="chart-legend" class="chart-legend"></div>
+              </div>
             </div>
-            <div id="chart-legend" class="chart-legend"></div>
           </div>
         </section>
 
