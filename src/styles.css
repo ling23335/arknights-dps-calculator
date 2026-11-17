@@ -1736,6 +1736,52 @@ input[type="search"]:focus {
   line-height: 1.5;
 }
 
+.chart-axis-select {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.chart-axis-select select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+
+.chart-axis-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.chart-axis-presets button {
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.chart-axis-presets button:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.chart-axis-hint {
+  margin: 0 0 11px !important;
+  padding: 7px;
+  border-radius: 6px;
+  background: rgba(114, 221, 197, 0.055);
+  color: #91a5b9 !important;
+}
+
 .chart-covenant-list {
   display: grid;
   gap: 7px;

@@ -670,12 +670,34 @@
     const container = document.querySelector('#chart-covenant-controls');
     const bonds = selectedBonds();
     const focused = focusedCovenant();
+    const axisControls = `
+      <label class="chart-axis-select">
+        <span>扫描变量</span>
+        <select id="chart-axis">
+          <option value="covenant"${state.axis === 'covenant' ? ' selected' : ''}>盟约层数</option>
+          <option value="aspd"${state.axis === 'aspd' ? ' selected' : ''}>攻速加成</option>
+          <option value="def"${state.axis === 'def' ? ' selected' : ''}>敌人防御</option>
+          <option value="res"${state.axis === 'res' ? ' selected' : ''}>敌人法抗</option>
+        </select>
+      </label>
+      <div class="chart-axis-presets">
+        <button type="button" data-chart-axis-preset="covenant">盟约增长</button>
+        <button type="button" data-chart-axis-preset="aspd">阻回抖动</button>
+      </div>
+      <p class="chart-axis-hint">${
+        state.axis === 'aspd'
+          ? '攻速横轴用于观察充能、阻回和普攻穿插造成的周期性抖动。'
+          : state.axis === 'covenant'
+            ? '盟约横轴用于观察单条盟约提升时的整体 DPS 增长。'
+            : '当前横轴为敌人参数。'
+      }</p>`;
     if (!bonds.length) {
       container.innerHTML =
-        '<h3>横轴盟约</h3><p>当前没有可分析的盟约。</p>';
+        `${axisControls}<h3>横轴盟约</h3><p>当前没有可分析的盟约。</p>`;
       return;
     }
     container.innerHTML = `
+      ${axisControls}
       <h3>横轴盟约</h3>
       <p>选择一条盟约扫描层数，其他盟约保持当前值不变。</p>
       <div class="chart-covenant-list">
@@ -1847,8 +1869,14 @@
       '#chart-covenant-controls',
     );
     chartControls.addEventListener('change', (event) => {
-      if (event.target.name === 'chart-covenant-axis') {
+      if (event.target.id === 'chart-axis') {
         clearTimeout(chartControlTimer);
+        state.axis = event.target.value;
+        renderChartCovenantControls();
+        updateResults();
+      } else if (event.target.name === 'chart-covenant-axis') {
+        clearTimeout(chartControlTimer);
+        state.axis = 'covenant';
         state.chartCovenantId = event.target.value;
         renderChartCovenantControls();
         updateResults();
@@ -1858,6 +1886,13 @@
         renderCovenantSummary();
         updateResults();
       }
+    });
+    chartControls.addEventListener('click', (event) => {
+      const preset = event.target.closest('[data-chart-axis-preset]');
+      if (!preset) return;
+      state.axis = preset.dataset.chartAxisPreset;
+      renderChartCovenantControls();
+      updateResults();
     });
     chartControls.addEventListener('input', (event) => {
       const bondId = event.target.dataset.chartCovenantLayer;
@@ -2238,10 +2273,6 @@
   document.querySelector('#enemy-res').addEventListener('input', (event) => {
     updateEnemyControl('res', event.target.value);
   });
-  document.querySelector('#chart-axis').addEventListener('change', (event) => {
-    state.axis = event.target.value;
-    updateResults();
-  });
   document.querySelector('#reset').addEventListener('click', resetExample);
   document.querySelector('#export').addEventListener('click', exportCsv);
   window.addEventListener('resize', drawChart);
@@ -2249,7 +2280,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-17.2 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-17.3 · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot('艾雅法拉', '点燃'),
     createSlot('艾雅法拉', '火山'),
