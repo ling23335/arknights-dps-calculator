@@ -1679,17 +1679,33 @@
       ...enemy,
       hp: enemyHp,
     };
-    const refractionAspdPenalty =
-      combatEnemy.refraction?.active && slot.damageType === 'arts'
-        ? combatEnemy.refraction.attackSpeedPenalty ?? 0
-        : 0;
-    const globalAspd =
+    const baseGlobalAspd =
       covenantEffects.aspd +
       referenceEffects.aspd +
       traitEffects.aspd +
       talentEffects.aspd +
-      Number(talent.module?.aspd ?? 0) +
-      refractionAspdPenalty;
+      Number(talent.module?.aspd ?? 0);
+    const refractionAttackSpeedPenalty =
+      combatEnemy.refraction?.active && slot.damageType === 'arts'
+        ? combatEnemy.refraction.attackSpeedPenalty ?? 0
+        : 0;
+    const refractionDuration = Math.max(
+      0,
+      combatEnemy.refraction?.duration ?? 0,
+    );
+    const attackIntervalBeforeRefraction =
+      stats.attackInterval /
+      (1 + Math.max(-95, baseGlobalAspd) / 100);
+    const refractionDuty =
+      refractionAttackSpeedPenalty < 0 && refractionDuration > 0
+        ? Math.min(
+            1,
+            refractionDuration / attackIntervalBeforeRefraction,
+          )
+        : 1;
+    const globalAspd =
+      baseGlobalAspd +
+      refractionAttackSpeedPenalty * refractionDuty;
     const totalAspd = slot.aspd + globalAspd;
     const activeWindow = Math.max(0, slot.duration);
     const simulationInput = {
@@ -2937,7 +2953,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.15 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.16 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
