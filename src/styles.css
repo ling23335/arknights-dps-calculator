@@ -907,6 +907,13 @@ input[type="search"]:focus {
   display: none;
 }
 
+.enemy-mode-note {
+  margin: 0;
+  color: #8093a9;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .enemy-profile {
   padding: 9px 10px;
   border: 1px solid var(--line-soft);

@@ -2953,7 +2953,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.16 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.17 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
