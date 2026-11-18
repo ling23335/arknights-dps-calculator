@@ -22,6 +22,15 @@ function round(value) {
     : Math.round(value * 1000) / 1000;
 }
 
+function blackboardValue(blackboard, suffix, fallback = null) {
+  const normalizedSuffix = suffix.toLowerCase();
+  const entry = Object.entries(blackboard ?? {}).find(([key]) =>
+    key.toLowerCase().endsWith(normalizedSuffix),
+  );
+  const value = Number(entry?.[1]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 function attributeValue(record, key, fallback = 0) {
   const value = record?.EnemyData?.Attributes?.[key];
   return value?.MValue ?? fallback;
@@ -134,6 +143,19 @@ export function applyUltimateEnemyStats(snapshot, activity) {
     const battleEffectiveness =
       autoData.RandomEnemyAttributeDict?.[enemy.enemyId]
         ?.EnemyBattleEffectivenessFactor ?? 1;
+    const refractionActive = enemy.specialType === 'REFLECTION';
+    const refractionResistance = refractionActive
+      ? blackboardValue(enemy.talentBlackboard, 'refracting.magic_resistance', 70)
+      : 0;
+    const refractionHpBonus = refractionActive
+      ? blackboardValue(enemy.talentBlackboard, 'refracting.max_hp', 0)
+      : 0;
+    const refractionAttackSpeedPenalty = refractionActive
+      ? blackboardValue(enemy.talentBlackboard, 'refracting.attack_speed', 0)
+      : 0;
+    const refractionDuration = refractionActive
+      ? blackboardValue(enemy.talentBlackboard, 'refracting.duration', 0)
+      : 0;
     const base = {
       hp: enemy.baseHp ?? enemy.hp,
       attack: enemy.baseAttack ?? enemy.attack,
@@ -141,10 +163,13 @@ export function applyUltimateEnemyStats(snapshot, activity) {
       resistance: enemy.baseResistance ?? enemy.resistance,
     };
     const ultimate = {
-      hp: bossHp ?? base.hp * factors.mode,
+      hp: (bossHp ?? base.hp * factors.mode) * (1 + refractionHpBonus),
       attack: base.attack * factors.attack * factors.mode,
       defense: base.defense * factors.defense * factors.mode,
-      resistance: Math.min(100, base.resistance * factors.resistance),
+      resistance: Math.min(
+        100,
+        base.resistance * factors.resistance + refractionResistance,
+      ),
     };
     return {
       ...enemy,
@@ -157,6 +182,15 @@ export function applyUltimateEnemyStats(snapshot, activity) {
       defense: round(ultimate.defense),
       resistance: round(ultimate.resistance),
       battleEffectivenessFactor: battleEffectiveness,
+      refraction: refractionActive
+        ? {
+            active: true,
+            magicResistanceBonus: refractionResistance,
+            hpBonus: refractionHpBonus,
+            attackSpeedPenalty: refractionAttackSpeedPenalty,
+            duration: refractionDuration,
+          }
+        : null,
       ultimate: {
         modeId: MODE_ID,
         modeName: mode.Name,

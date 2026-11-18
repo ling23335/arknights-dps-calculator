@@ -1401,6 +1401,27 @@
       <details class="enemy-factor-details">
         <summary>特殊机制与本地敌人数据</summary>
         <p>${escapeHtml(enemy.description || '该敌人没有简介数据。')}</p>
+        ${
+          enemy.refraction?.active
+            ? `<p><b>折射生效</b>：法术抗性 +${decimal.format(
+                enemy.refraction.magicResistanceBonus,
+              )}${
+                enemy.refraction.hpBonus
+                  ? ` · 生命 +${decimal.format(
+                      enemy.refraction.hpBonus * 100,
+                    )}%`
+                  : ''
+              }${
+                enemy.refraction.attackSpeedPenalty
+                  ? ` · 受到法术伤害时攻击速度 ${decimal.format(
+                      enemy.refraction.attackSpeedPenalty,
+                    )}，持续 ${decimal.format(
+                      enemy.refraction.duration,
+                    )} 秒`
+                  : ''
+              }</p>`
+            : ''
+        }
         <p>标签：${escapeHtml((enemy.tags ?? []).join(' / ') || '无')}</p>
         <p>状态免疫：${escapeHtml(
           (enemy.immunities ?? []).map(enemyMechanicLabel).join('、') ||
@@ -1645,19 +1666,32 @@
     const chargeBased = slot.chargeBased && slot.duration <= 0;
     const useSpState =
       slot.spMode === 'natural' || slot.spMode === 'attack';
-    const globalAspd =
-      covenantEffects.aspd +
-      referenceEffects.aspd +
-      traitEffects.aspd +
-      talentEffects.aspd +
-      Number(talent.module?.aspd ?? 0);
-    const totalAspd = slot.aspd + globalAspd;
-    const activeWindow = Math.max(0, slot.duration);
     const enemyHp =
       enemy.hp ??
       (state.enemy.useStronghold
         ? enemyMap.get(state.enemy.selectedId)?.hp
         : Infinity);
+    const strongholdEnemy = state.enemy.useStronghold
+      ? enemyMap.get(state.enemy.selectedId)
+      : null;
+    const combatEnemy = {
+      ...(strongholdEnemy ?? {}),
+      ...enemy,
+      hp: enemyHp,
+    };
+    const refractionAspdPenalty =
+      combatEnemy.refraction?.active && slot.damageType === 'arts'
+        ? combatEnemy.refraction.attackSpeedPenalty ?? 0
+        : 0;
+    const globalAspd =
+      covenantEffects.aspd +
+      referenceEffects.aspd +
+      traitEffects.aspd +
+      talentEffects.aspd +
+      Number(talent.module?.aspd ?? 0) +
+      refractionAspdPenalty;
+    const totalAspd = slot.aspd + globalAspd;
+    const activeWindow = Math.max(0, slot.duration);
     const simulationInput = {
       attack:
         stats.attack + traitEffects.flatAttack + talentEffects.flatAttack,
@@ -1738,7 +1772,7 @@
     };
     const result = calc.simulateFrameDps({
       ...simulationInput,
-      enemy: { ...enemy, hp: enemyHp },
+      enemy: combatEnemy,
     });
     const equivalentWindow = result.killTime ?? simulationInput.horizon;
     const dummyResult = calc.simulateFrameDps({
@@ -2903,7 +2937,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.14 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.15 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
