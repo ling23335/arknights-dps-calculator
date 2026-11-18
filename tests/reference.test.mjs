@@ -120,10 +120,13 @@ test('ultimate enemy snapshot retains local special mechanics', () => {
     fs.readFileSync(snapshot.source.gameData, 'utf8'),
   );
   const enriched = enrichEnemySnapshot(snapshot, database, activity);
-  const restored = applyUltimateEnemyStats(
+  const restoredEnemies = applyUltimateEnemyStats(
     enriched,
     activity,
-  ).enemies.find((item) => item.enemyId === enemy.enemyId);
+  ).enemies;
+  const restored = restoredEnemies.find(
+    (item) => item.enemyId === enemy.enemyId,
+  );
 
   assert.equal(restored.description.includes('蒸汽甲胄'), true);
   assert.equal(restored.tags.includes('machine'), true);
@@ -146,6 +149,18 @@ test('ultimate enemy snapshot retains local special mechanics', () => {
       ?.typeName,
     '特训敌人·隐匿',
   );
+  const mirrorEye = restoredEnemies.find(
+    (item) => item.enemyId === 'enemy_9039_acrefm',
+  );
+  const mirrorMembrane = restoredEnemies.find(
+    (item) => item.enemyId === 'enemy_9011_acrefr',
+  );
+  assert.equal(mirrorEye.resistance, 70);
+  assert.equal(mirrorEye.refraction.attackSpeedPenalty, -50);
+  assert.equal(mirrorEye.refraction.duration, 3);
+  assert.equal(mirrorMembrane.resistance, 70);
+  assert.equal(mirrorMembrane.hp, 54000);
+  assert.equal(mirrorMembrane.refraction.hpBonus, 1);
 });
 
 test('autochess character traits include Ember SP recovery', () => {
