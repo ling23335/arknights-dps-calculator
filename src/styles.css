@@ -914,6 +914,20 @@ input[type="search"]:focus {
   line-height: 1.45;
 }
 
+.enemy-room-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft);
+  font-size: 9px;
+}
+
+.enemy-room-control select {
+  width: auto;
+  min-width: 136px;
+}
+
 .enemy-profile {
   padding: 9px 10px;
   border: 1px solid var(--line-soft);

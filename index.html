@@ -58,7 +58,16 @@
           </label>
           <div id="stronghold-enemy-panel" class="stronghold-enemy-panel">
             <input id="stronghold-enemy-search" type="search" placeholder="搜索卫戍敌人">
-            <p class="enemy-mode-note">多人终极模拟：2/3/4 人共用本地敌人表中的单体属性；人数变化不会修改这里展示的单元数值。</p>
+            <label class="enemy-room-control">
+              <span>房间人数（共享领袖总血倍率）</span>
+              <select id="stronghold-room-size" aria-label="卫戍房间人数">
+                <option value="1">1 人 · 1×（本地单体基础）</option>
+                <option value="2">2 人 · 2×</option>
+                <option value="3">3 人 · 3×</option>
+                <option value="4" selected>4 人 · 4×</option>
+              </select>
+            </label>
+            <p class="enemy-mode-note">本地终极关卡只登记一个共享领袖实例。攻防、法抗与普通敌人的单体生命不随人数改变；共享领袖总生命按 2×/3×/4× 显示。</p>
             <select id="stronghold-enemy-type" aria-label="卫戍敌人类型">
               <option value="all">全部敌人类型</option>
             </select>
@@ -348,14 +357,14 @@
   </div>
 
   <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
-  <script src="data/operators-autochess.js?v=2026-11-18.17"></script>
-  <script src="data/covenants.js?v=2026-11-18.17"></script>
-  <script src="data/enemies.js?v=2026-11-18.17"></script>
-  <script src="data/equipment.js?v=2026-11-18.17"></script>
-  <script src="data/commands.js?v=2026-11-18.17"></script>
-  <script src="data/autochess-traits.js?v=2026-11-18.17"></script>
-  <script src="data/autochess-modules.js?v=2026-11-18.17"></script>
-  <script src="src/calc.js?v=2026-11-18.17"></script>
-  <script src="src/app.js?v=2026-11-18.17"></script>
+  <script src="data/operators-autochess.js?v=2026-11-18.18"></script>
+  <script src="data/covenants.js?v=2026-11-18.18"></script>
+  <script src="data/enemies.js?v=2026-11-18.18"></script>
+  <script src="data/equipment.js?v=2026-11-18.18"></script>
+  <script src="data/commands.js?v=2026-11-18.18"></script>
+  <script src="data/autochess-traits.js?v=2026-11-18.18"></script>
+  <script src="data/autochess-modules.js?v=2026-11-18.18"></script>
+  <script src="src/calc.js?v=2026-11-18.18"></script>
+  <script src="src/app.js?v=2026-11-18.18"></script>
 </body>
 </html>

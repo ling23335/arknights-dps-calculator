@@ -9,6 +9,7 @@ const {
   estimateSkillHints,
   calculateDpsModel,
   simulateFrameDps,
+  sharedBossHp,
   inferDamageType,
   classifySkillOutput,
   mergeTalentEffects,
@@ -23,6 +24,14 @@ test('physical damage subtracts defense', () => {
     damageAfterMitigation(1000, 'physical', { def: 320, res: 50 }),
     680,
   );
+});
+
+test('shared boss hp scales with the room player count', () => {
+  assert.equal(sharedBossHp(3940000, 1), 3940000);
+  assert.equal(sharedBossHp(3940000, 2), 7880000);
+  assert.equal(sharedBossHp(3940000, 3), 11820000);
+  assert.equal(sharedBossHp(3940000, 4), 15760000);
+  assert.equal(sharedBossHp(3940000, 8), 15760000);
 });
 
 test('cycle dps weights active and ready phases by time', () => {

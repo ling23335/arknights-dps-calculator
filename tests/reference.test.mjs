@@ -103,6 +103,28 @@ test('ultimate enemy snapshot applies the exact V3_1 mode factors', () => {
   assert.equal(enemy.baseDefense, 1000);
 });
 
+test('multiplayer boss base hp has no player-count table entry', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/enemies.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const activity = JSON.parse(
+    fs.readFileSync(snapshot.source.gameData, 'utf8'),
+  );
+  const season =
+    activity.Activity.Autochess.act3autochess[0].V3_1;
+  const blood = season.BossInfoDict.boss_1.BloodDataDict;
+
+  assert.equal(blood.mode_multi_abyss, 3940000);
+  assert.equal(blood.mode_single_20, 3940000);
+  assert.equal(
+    Object.keys(blood).some((key) => /player|member|room/i.test(key)),
+    false,
+  );
+});
+
 test('ultimate enemy snapshot retains local special mechanics', () => {
   const snapshot = JSON.parse(
     fs.readFileSync(

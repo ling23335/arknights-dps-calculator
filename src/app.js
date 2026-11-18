@@ -76,6 +76,7 @@
       res: enemyMap.get(defaultEnemyId)?.resistance ?? 30,
       useStronghold: true,
       selectedId: defaultEnemyId,
+      roomSize: 4,
     },
     axis: 'covenant',
     chartCovenantId: defaultCovenantIds[0],
@@ -135,6 +136,7 @@
     '#stronghold-enemy-type',
   );
   const strongholdEnemySelect = document.querySelector('#stronghold-enemy');
+  const strongholdRoomSize = document.querySelector('#stronghold-room-size');
   const strongholdEnemyProfile = document.querySelector(
     '#stronghold-enemy-profile',
   );
@@ -1293,6 +1295,13 @@
     }[key] ?? key;
   }
 
+  function strongholdTargetHp(enemy) {
+    if (!enemy) return Infinity;
+    return enemy.category === 'boss'
+      ? calc.sharedBossHp(enemy.hp, state.enemy.roomSize)
+      : enemy.hp;
+  }
+
   function renderStrongholdEnemyOptions() {
     const query = strongholdEnemySearch.value.trim().toLowerCase();
     const type = strongholdEnemyType.value;
@@ -1389,7 +1398,12 @@
       <strong>${escapeHtml(enemy.name)}</strong>
       <span>终极模拟 · ${escapeHtml(enemyCategoryLabel(enemy))} · ${escapeHtml(enemy.enemyIndex || enemy.enemyId)}</span>
       <div>
-        <i>生命 ${number.format(enemy.hp ?? 0)}</i>
+        <i>单体生命 ${number.format(enemy.hp ?? 0)}</i>
+        ${
+          enemy.category === 'boss'
+            ? `<i>${state.enemy.roomSize} 人共享总血 ${number.format(strongholdTargetHp(enemy))}</i>`
+            : '<i>单体生命不按人数放大</i>'
+        }
         <i>攻击 ${number.format(enemy.attack ?? 0)}</i>
         <i>防御（物理端） ${number.format(enemy.defense)}</i>
         <i>法术抗性 ${decimal.format(enemy.resistance)}%</i>
@@ -1473,6 +1487,7 @@
 
   function syncStrongholdEnemyUI() {
     strongholdEnemyEnabled.checked = state.enemy.useStronghold;
+    strongholdRoomSize.value = String(state.enemy.roomSize);
     strongholdEnemyPanel.classList.toggle(
       'is-disabled',
       !state.enemy.useStronghold,
@@ -1666,14 +1681,12 @@
     const chargeBased = slot.chargeBased && slot.duration <= 0;
     const useSpState =
       slot.spMode === 'natural' || slot.spMode === 'attack';
-    const enemyHp =
-      enemy.hp ??
-      (state.enemy.useStronghold
-        ? enemyMap.get(state.enemy.selectedId)?.hp
-        : Infinity);
     const strongholdEnemy = state.enemy.useStronghold
       ? enemyMap.get(state.enemy.selectedId)
       : null;
+    const enemyHp =
+      enemy.hp ??
+      (strongholdEnemy ? strongholdTargetHp(strongholdEnemy) : Infinity);
     const combatEnemy = {
       ...(strongholdEnemy ?? {}),
       ...enemy,
@@ -1960,6 +1973,7 @@
 
   function renderKillCalculator() {
     const enemy = enemyMap.get(state.enemy.selectedId);
+    const targetHp = strongholdTargetHp(enemy);
     const limit = Math.max(0.1, Number(state.killLimit) || 5);
     const results =
       lastResults.length > 0
@@ -1973,18 +1987,18 @@
     document.querySelector('#kill-target-name').textContent =
       enemy?.name ?? '未选择敌人';
     document.querySelector('#kill-target-meta').textContent = enemy
-      ? `${enemy.ultimate?.modeName ?? '终极模拟'} · ${enemyCategoryLabel(enemy)} · ${enemy.enemyIndex || enemy.enemyId}`
+      ? `${enemy.ultimate?.modeName ?? '终极模拟'} · ${enemyCategoryLabel(enemy)} · ${enemy.enemyIndex || enemy.enemyId}${enemy.category === 'boss' ? ` · ${state.enemy.roomSize} 人共享总血` : ''}`
       : '请先在上方敌人参数中选择目标';
     document.querySelector('#kill-target-stats').innerHTML = enemy
       ? `
-        <span>生命<br><b>${number.format(enemy.hp)}</b></span>
+        <span>${enemy.category === 'boss' ? '共享总生命' : '生命'}<br><b>${number.format(targetHp)}</b></span>
         <span>攻击<br><b>${number.format(enemy.attack)}</b></span>
         <span>防御<br><b>${number.format(enemy.defense)}</b></span>
         <span>法抗<br><b>${decimal.format(enemy.resistance)}%</b></span>
         <span>攻击间隔<br><b>${decimal.format(enemy.attackInterval ?? 0)}s</b></span>
         <span>重量<br><b>${number.format(enemy.massLevel ?? 0)}</b></span>`
       : '<span>暂无目标数据</span>';
-    const requiredDps = enemy ? enemy.hp / limit : Infinity;
+    const requiredDps = enemy ? targetHp / limit : Infinity;
     document.querySelector('#kill-required-dps').textContent =
       Number.isFinite(requiredDps)
         ? number.format(Math.ceil(requiredDps))
@@ -1994,7 +2008,7 @@
         const dps = item.result.cycleDps;
         const estimatedKill =
           item.result.killTime ??
-          (dps > 0 && enemy ? enemy.hp / dps : Infinity);
+          (dps > 0 && enemy ? targetHp / dps : Infinity);
         const met = estimatedKill <= limit;
         const timeLabel =
           item.result.killTime === null
@@ -2344,7 +2358,7 @@
       const enemyLabel =
         width < 500
           ? `${enemy ? '终极敌' : '手动敌'} ${enemy?.enemyIndex ?? ''} · ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`
-          : `${enemy ? `终极敌人：${enemy.name} · ${number.format(enemy.hp ?? 0)} 生命` : '手动敌人参数'} / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
+          : `${enemy ? `终极敌人：${enemy.name} · ${number.format(strongholdTargetHp(enemy))} ${enemy.category === 'boss' ? `${state.enemy.roomSize} 人共享总生命` : '生命'}` : '手动敌人参数'} / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
       ctx.fillText(
         enemyLabel,
         margin.left + 8,
@@ -2715,6 +2729,15 @@
       renderStrongholdEnemyProfile();
       if (state.enemy.useStronghold) applyStrongholdEnemy();
     });
+    strongholdRoomSize.addEventListener('change', (event) => {
+      state.enemy.roomSize = Math.max(
+        1,
+        Math.min(4, Number(event.target.value) || 1),
+      );
+      renderStrongholdEnemyProfile();
+      updateResults();
+      renderKillCalculator();
+    });
   }
 
   function bindKillEvents() {
@@ -2785,6 +2808,7 @@
       res: defaultEnemy?.resistance ?? 30,
       useStronghold: true,
       selectedId: defaultEnemyId,
+      roomSize: 4,
     };
     state.axis = 'covenant';
     document.querySelector('#chart-axis').value = 'covenant';
@@ -2825,6 +2849,8 @@
         '回转',
         '敌人防御',
         '敌方法抗',
+        '房间人数',
+        '当前目标生命',
         '命中盟约',
         '装备DPS',
         '转盟约DPS',
@@ -2866,6 +2892,8 @@
           item.result.readyTime,
           state.enemy.def,
           state.enemy.res,
+          state.enemy.roomSize,
+          strongholdTargetHp(enemyMap.get(state.enemy.selectedId)),
           item.covenant.applied.map((entry) => entry.bond.name).join('、'),
           item.equipmentBase.result.cycleDps,
           item.result.cycleDps,
@@ -2953,7 +2981,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.17 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-18.18 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),

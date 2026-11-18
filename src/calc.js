@@ -651,6 +651,11 @@ function simulateFrameDps({
   };
 }
 
+function sharedBossHp(hp, roomSize) {
+  const players = Math.max(1, Math.min(4, Math.floor(Number(roomSize) || 1)));
+  return Math.max(0, Number(hp) || 0) * players;
+}
+
 function matchOperatorName(names, query) {
   const normalizedQuery = String(query ?? '').trim().toLocaleLowerCase('zh-CN');
   if (!normalizedQuery) return '';
@@ -1028,6 +1033,7 @@ globalThis.ArkCalc = {
   mergeTalentEffects,
   calculateDpsModel,
   simulateFrameDps,
+  sharedBossHp,
   matchOperatorName,
   evaluateAutoChessTrait,
   evaluateCovenant,
