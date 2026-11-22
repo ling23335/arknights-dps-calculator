@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="app-build" content="2026-11-18.17">
+  <meta name="app-build" content="2026-11-22.9">
   <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
-  <link rel="stylesheet" href="src/styles.css?v=2026-11-18.18">
+  <link rel="stylesheet" href="src/styles.css?v=2026-11-22.9">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -27,10 +27,25 @@
       </div>
     </header>
 
+    <section id="operator-dock" class="panel operator-dock" aria-label="干员快速选择">
+      <div class="operator-dock-head">
+        <div>
+          <p class="eyebrow">OPERATOR LOADOUT</p>
+          <h2>干员快速选择</h2>
+          <p>所属盟约直接读取原始解包；当前生效只显示已启用并实际影响该干员的盟约。</p>
+        </div>
+        <span>三路并排 · 结果实时更新</span>
+      </div>
+      <section id="slots" class="slots" aria-label="干员技能对比设置"></section>
+      <datalist id="operator-search-list"></datalist>
+    </section>
+
     <div class="workspace">
       <aside class="sidebar">
         <nav id="document-nav" class="document-nav" aria-label="页面目录">
           <span class="document-nav-label">项目栏</span>
+          <a href="#operator-dock">选择干员</a>
+          <a href="#ranking-section">盟约排行</a>
           <a href="#chart-section">战况图</a>
           <a href="#covenant-panel">卫戍盟约</a>
           <a href="#equipment-section">装备</a>
@@ -91,6 +106,15 @@
             <input id="enemy-res" type="range" min="0" max="100" step="1" value="75">
           </label>
 
+          <label class="control">
+            <span class="control-head">
+              <span>同时命中目标数</span>
+              <output id="targetCount-output">6</output>
+            </span>
+            <input id="enemy-targetCount" type="range" min="1" max="20" step="1" value="6">
+            <small>群怪总 DPS 口径；每个技能仍受本地 max_target / 群体攻击上限约束。</small>
+          </label>
+
           <button id="reset" class="ghost-button" type="button">清空方案配置</button>
         </section>
 
@@ -119,6 +143,28 @@
       </aside>
 
       <main>
+        <section id="ranking-section" class="module panel ranking-module" data-module="ranking">
+          <div class="ranking-head">
+            <div>
+              <p class="eyebrow">MATHEMATICAL TIER BOARD</p>
+              <h2>卫戍盟约 · 纯数学模型排行</h2>
+              <p id="ranking-scope-note">按本地满层数据、核心 6 人档与增益全部生效计算；群怪榜默认按 6 名目标。</p>
+            </div>
+            <div class="ranking-controls" role="group" aria-label="排行榜筛选">
+              <button type="button" data-ranking-group="core" aria-pressed="true">核心盟约</button>
+              <button type="button" data-ranking-group="aux" aria-pressed="false">附加盟约</button>
+              <button type="button" data-ranking-mode="stable" aria-pressed="false">稳定期望</button>
+              <button type="button" data-ranking-mode="ceiling" aria-pressed="false">理论上限</button>
+              <button type="button" data-ranking-mode="wave" aria-pressed="true">群怪口径</button>
+            </div>
+          </div>
+          <div id="ranking-board" class="ranking-board" aria-live="polite"></div>
+          <details class="ranking-utility">
+            <summary>不直接参与 DPS 排名的运营盟约</summary>
+            <div id="ranking-utility-list" class="ranking-utility-list"></div>
+          </details>
+        </section>
+
         <section id="chart-section" class="module panel chart-panel" data-module="chart">
           <div class="chart-head">
             <div>
@@ -128,6 +174,7 @@
             <div class="chart-head-right">
               <div id="chart-summary" class="chart-summary">等待计算</div>
               <div class="module-tools">
+                <button type="button" id="chart-log-toggle" aria-pressed="false">纵轴对数</button>
                 <button type="button" data-module-collapse>收起</button>
                 <button type="button" data-module-maximize>放大</button>
               </div>
@@ -262,9 +309,9 @@
         <section id="dps-section" class="module dps-module" data-module="dps">
           <div class="comparison-head">
             <div>
-              <p class="eyebrow">COMPARISON BOARD</p>
-              <h2>三路输出对比</h2>
-              <p>先选干员与技能，再按需要校准技能参数。</p>
+              <p class="eyebrow">RESULT BREAKDOWN</p>
+              <h2>三路结果明细</h2>
+              <p>干员选择已移至页面顶部；这里保留逐帧结果和导出。</p>
             </div>
             <div class="comparison-actions">
               <button id="export" class="primary-button" type="button">导出当前结果 CSV</button>
@@ -275,9 +322,6 @@
             </div>
           </div>
           <div class="module-body">
-            <section id="slots" class="slots" aria-label="干员技能对比设置"></section>
-            <datalist id="operator-search-list"></datalist>
-
             <section class="panel result-panel">
               <div class="section-title">
                 <span>03</span>
@@ -357,14 +401,14 @@
   </div>
 
   <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
-  <script src="data/operators-autochess.js?v=2026-11-18.18"></script>
-  <script src="data/covenants.js?v=2026-11-18.18"></script>
-  <script src="data/enemies.js?v=2026-11-18.18"></script>
-  <script src="data/equipment.js?v=2026-11-18.18"></script>
-  <script src="data/commands.js?v=2026-11-18.18"></script>
-  <script src="data/autochess-traits.js?v=2026-11-18.18"></script>
-  <script src="data/autochess-modules.js?v=2026-11-18.18"></script>
-  <script src="src/calc.js?v=2026-11-18.18"></script>
-  <script src="src/app.js?v=2026-11-18.18"></script>
+  <script src="data/operators-autochess.js?v=2026-11-22.9"></script>
+  <script src="data/covenants.js?v=2026-11-22.9"></script>
+  <script src="data/enemies.js?v=2026-11-22.9"></script>
+  <script src="data/equipment.js?v=2026-11-22.9"></script>
+  <script src="data/commands.js?v=2026-11-22.9"></script>
+  <script src="data/autochess-traits.js?v=2026-11-22.9"></script>
+  <script src="data/autochess-modules.js?v=2026-11-22.9"></script>
+  <script src="src/calc.js?v=2026-11-22.9"></script>
+  <script src="src/app.js?v=2026-11-22.9"></script>
 </body>
 </html>

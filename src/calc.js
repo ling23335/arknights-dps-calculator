@@ -1,3 +1,13 @@
+const ATTACK_FRAME_RATE = 30;
+
+// Arknights resolves attacks on 30 fps frames, so the effective interval is
+// the computed interval rounded UP to the next frame (1.6s -> 48 frames,
+// 1.6s at +33 ASPD -> 37 frames, matching the 36-frame SP block threshold).
+function quantizeAttackInterval(seconds) {
+  const value = Math.max(0.05, Number(seconds) || 0);
+  return Math.ceil(value * ATTACK_FRAME_RATE - 1e-9) / ATTACK_FRAME_RATE;
+}
+
 function damageAfterMitigation(rawDamage, damageType, enemy = {}) {
   if (damageType === 'physical') {
     return Math.max(rawDamage - Math.max(0, enemy.def ?? 0), rawDamage * 0.05);
@@ -109,11 +119,7 @@ function estimateSkillHints(
   const addBuffScale = addBuffMatch
     ? 1 + Number(addBuffMatch[1]) / 100
     : 0;
-  let attackMultiplier = Math.max(
-    directScale,
-    rampMatch ? rampScale : toBuffScale,
-    addBuffScale,
-  );
+  let attackMultiplier = scaleMatch ? directScale : 1;
   const extraDamageMatch = description.match(
     /额外(?:攻击(?:一个目标|1名敌人)[^。\n]{0,12}?并)?造成(?:([0-9一二两三四五六七八九十]+)次)?[^。\n]{0,12}?(?:相当于)?攻击力\s*(\d+(?:\.\d+)?)%/,
   );
@@ -154,8 +160,18 @@ function estimateSkillHints(
   const blackboardScale = blackboardScaleKeys
     .map((key) => Number(blackboard[key]))
     .find((value) => Number.isFinite(value) && value > 0);
+  const attackBonusFromBlackboard = Number(blackboard.atk);
+  const rampIsDamageScale =
+    Boolean(rampMatch && blackboardScale) &&
+    !Number.isFinite(attackBonusFromBlackboard);
+  if (rampIsDamageScale) {
+    attackMultiplier = Math.max(attackMultiplier, rampScale);
+  }
   const hasTextScale = Boolean(
-    scaleMatch || rampMatch || toBuffMatch || addBuffMatch,
+    scaleMatch ||
+      extraDamageMatch ||
+      followUpDamageMatch ||
+      rampIsDamageScale,
   );
   let resolvedAttackMultiplier =
     !blackboardScale
@@ -165,6 +181,18 @@ function estimateSkillHints(
         : hasTextScale
           ? Math.max(attackMultiplier, blackboardScale)
           : blackboardScale;
+  const textAttackBonus =
+    rampMatch && !rampIsDamageScale
+      ? Math.max(0, rampScale - 1)
+      : Math.max(
+          toBuffScale ? Math.max(0, toBuffScale - 1) : 0,
+          addBuffScale ? Math.max(0, addBuffScale - 1) : 0,
+        );
+  const resolvedAttackBonus = Math.round(
+    (Number.isFinite(attackBonusFromBlackboard)
+      ? attackBonusFromBlackboard
+      : textAttackBonus) * 1e9,
+  ) / 1e9;
 
   const interval = description.match(
     /攻击间隔[^。；，,]*[（(]\s*([-+]?\d+(?:\.\d+)?)\s*[）)]/,
@@ -216,38 +244,440 @@ function estimateSkillHints(
   const hitMatch = hitPatterns
     .map((pattern) => description.match(pattern))
     .find(Boolean);
+  const extraSlashMatch = description.match(
+    /额外斩击(?:目标)?\s*([0-9一二两三四五六七八九十]+)\s*次/,
+  );
+  const extraSlashHits = extraSlashMatch ? parseCount(extraSlashMatch[1]) : 0;
   const skillHits = Math.max(
     hitMatch ? parseCount(hitMatch[1]) : 1,
     blackboardHits ?? 1,
+    extraSlashHits ? extraSlashHits + 1 : 1,
   );
+
+  // Skills that replace the normal attack with a fixed cadence
+  // (e.g. Talulah S3 spawns 簇火 every normal_interval seconds).
+  const fixedActiveInterval =
+    Number(blackboard.normal_interval) > 0
+      ? Number(blackboard.normal_interval)
+      : Number(blackboard.overload_interval) > 0
+        ? Number(blackboard.overload_interval)
+        : 0;
+  // 4 skills (Angelina S2 / Blackkey S2 / Indigo S2 / Ember S2) store the
+  // absolute new interval in base_attack_time even though it is positive.
+  const bbInterval = Number(blackboard.base_attack_time);
+  const saysShorter =
+    /攻击间隔[^。]{0,8}缩短|缩短[^。]{0,8}攻击间隔/.test(description);
+  const absoluteActiveInterval =
+    Number.isFinite(bbInterval) && bbInterval > 0 && saysShorter
+      ? bbInterval
+      : 0;
+  // attack_speed on enemies is a debuff, not a self buff.
+  const bbAspd = Number(blackboard.attack_speed);
+  const aspdIsEnemyDebuff = /敌人[^。\n]{0,16}攻击速度/.test(description);
+  const resolvedAspd =
+    Number.isFinite(bbAspd) && bbAspd !== 0 && !aspdIsEnemyDebuff
+      ? bbAspd
+      : aspdMatch
+        ? Number(aspdMatch[1])
+        : 0;
+  const epRatioCandidates = [
+    blackboard['attack@ep_damage_ratio'],
+    blackboard['ep_damage_ratio'],
+    blackboard['attack@ep_damage_ratio_token'],
+    blackboard['ep_damage_ratio_token'],
+    blackboard.element_damage_scale,
+    blackboard.element_multiplier,
+  ]
+    .map(Number)
+    .filter(Number.isFinite);
+  const epRatioRaw = Math.max(0, ...epRatioCandidates);
+  // Some skills deal a flat amount of element impairment instead of scaling
+  // with the damage of the hit (e.g. Clementia S2).
+  const epFlatRaw = Math.max(
+    0,
+    ...[
+      blackboard['attack@water_element'],
+      blackboard['attack@fire_element'],
+      blackboard['attack@dark_element'],
+      blackboard['attack@sanity_element'],
+    ]
+      .map(Number)
+      .filter(Number.isFinite),
+  );
+  const epTypes = ['灼燃', '凋亡', '侵蚀', '神经']
+    .map((type) => ({
+      type,
+      index: description.indexOf(`${type}损伤`),
+    }))
+    .filter((item) => item.index >= 0)
+    .sort((a, b) => a.index - b.index)
+    .map((item) => item.type);
+  // A priority list means only the first eligible type is applied.
+  const prioritizedTypes = /（优先）/.test(description)
+    ? epTypes.slice(0, 1)
+    : epTypes;
+  const firstEpDescriptionIndex =
+    epTypes.length > 0 ? description.indexOf(`${epTypes[0]}损伤`) : -1;
+  const epLead =
+    firstEpDescriptionIndex >= 0
+      ? description.slice(
+          Math.max(0, firstEpDescriptionIndex - 45),
+          firstEpDescriptionIndex,
+        )
+      : '';
+  const lastAttackMention = epLead.lastIndexOf('攻击力');
+  const lastDamageMention = epLead.lastIndexOf('伤害');
+  const epBasis =
+    lastAttackMention >= 0 && lastAttackMention > lastDamageMention
+      ? 'attack'
+      : 'damage';
+  const targetCountMatch = description.match(
+    /(?:同时攻击|攻击最多|最多攻击|对最多|至多)\s*([0-9一二两三四五六七八九十]+)\s*(?:名|个|位)?(?:敌人|目标)/,
+  );
+  const targetCounts = [
+    blackboard['attack@max_target'],
+    blackboard.max_target,
+    blackboard['attack@max_target_ceil'],
+  ]
+    .map(Number)
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const explicitTargetCap = targetCountMatch
+    ? parseCount(targetCountMatch[1])
+    : targetCounts.length
+      ? Math.max(...targetCounts)
+      : 0;
+  const hitsAllTargets =
+    /群体(?:物理|法术|真实)?伤害|范围(?:物理|法术|真实|元素)?伤害|范围[^。\n]{0,16}(?:造成|受到)[^。\n]{0,20}(?:物理|法术|真实|元素)?伤害|范围[^。\n]{0,16}敌人[^。\n]{0,20}造成[^。\n]{0,16}伤害|范围内所有敌人|攻击范围内所有|周围所有敌人|全体敌人|溅射伤害|爆炸造成[^。\n]{0,20}范围/.test(
+      description,
+    );
+  const targetCap = explicitTargetCap || (hitsAllTargets ? Infinity : 1);
+  const epSources = prioritizedTypes.map((type) => ({
+    type,
+    ratio: epRatioRaw,
+    flatPerSecond: epFlatRaw,
+    basis: epBasis,
+  }));
+  const epType = epSources[0]?.type ?? '';
+  const perHitBurstScaleRaw = Math.max(
+    0,
+    ...[
+      blackboard['attack@extra_ep_damage_scale'],
+      blackboard['attack@element_atk_scale'],
+      blackboard.element_atk_scale,
+    ]
+      .map(Number)
+      .filter(Number.isFinite),
+  );
+  const burstPerHitScale =
+    /爆发期间/.test(description) &&
+    /元素伤害/.test(description) &&
+    !/每秒/.test(description)
+      ? perHitBurstScaleRaw
+      : 0;
+  const burstPerSecondScale =
+    /爆发期间/.test(description) &&
+    /每秒/.test(description) &&
+    /元素伤害/.test(description)
+      ? perHitBurstScaleRaw
+      : 0;
+  const burstPerBreakScale =
+    /爆发(?:开始|时)/.test(description) &&
+    /元素伤害/.test(description) &&
+    Number.isFinite(Number(blackboard.ep_damage_scale))
+      ? Math.max(0, Number(blackboard.ep_damage_scale)) *
+        Math.max(
+          1,
+          parseCount(
+            description.match(
+              /造成\s*([0-9一二两三四五六七八九十]+)\s*次[^。\n]{0,30}元素伤害/,
+            )?.[1] ?? 1,
+          ),
+        )
+      : 0;
 
   return {
     attackMultiplier: resolvedAttackMultiplier,
     intervalDelta: interval ? Number(interval[1]) : 0,
-    aspd: aspdMatch ? Number(aspdMatch[1]) : 0,
+    aspd: resolvedAspd,
     charges: chargeMatch ? Number(chargeMatch[1]) : 0,
     chargeBased: Boolean(chargeMatch),
     maxChargeTime,
     skillHits,
+    fixedActiveInterval,
+    attackBonus: resolvedAttackBonus,
+    absoluteActiveInterval,
+    targetCap,
+    ep: {
+      ratio: epRatioRaw,
+      flatPerSecond: epFlatRaw,
+      type: epType,
+      basis: epBasis,
+    },
+    epSources,
+    epBurst: {
+      perHitScale: burstPerHitScale,
+      perSecondScale: burstPerSecondScale,
+      perBreakScale: burstPerBreakScale,
+    },
   };
 }
 
 function inferDamageType(trait = '', skillDescription = '') {
-  const text = `${skillDescription} ${trait}`;
-  if (
-    text.includes('真实伤害') ||
-    text.includes('元素伤害') ||
-    /(?:伤害类型|伤害)(?:变为|转为)真实/.test(text)
-  ) {
-    return 'true';
+  const desc = String(skillDescription ?? '');
+  const traitText = String(trait ?? '');
+
+  // 1. explicit type conversion wins.
+  if (/伤害类型(?:变为|转为)\s*真实/.test(desc)) return 'true';
+  if (/伤害类型(?:变为|转为)\s*法术/.test(desc)) return 'arts';
+
+  // 2. drop secondary clauses (extra hits / add-on elemental or DoT damage)
+  //    so they do not override the main hit type.
+  const main = desc
+    .split(/[。；;\n]/)
+    .map((part) =>
+      part
+        .replace(/额外[^，,。；;\n]*/g, ' ')
+        .replace(/附带[^，,。；;\n]*/g, ' ')
+        .replace(/残留[^，,。；;\n]*/g, ' ')
+        .replace(/持续[^，,。；;\n]{0,16}伤害/g, ' '),
+    )
+    .join('；');
+
+  // 3. main damage phrase: "造成 ... X伤害"
+  const mainHit = main.match(
+    /造成[^，,。；;\n]{0,50}?(物理|法术|真实|元素)伤害/,
+  );
+  if (mainHit) {
+    if (mainHit[1] === '真实' || mainHit[1] === '元素') return 'true';
+    return mainHit[1] === '法术' ? 'arts' : 'physical';
   }
-  if (
-    text.includes('法术伤害') ||
-    /(?:伤害类型|伤害)(?:变为|转为)法术/.test(text)
-  ) {
-    return 'arts';
-  }
+
+  // 4. fall back to the (secondary-clause-stripped) text.
+  if (/真实伤害/.test(main)) return 'true';
+  if (/法术伤害/.test(main)) return 'arts';
+  if (/元素伤害/.test(main)) return 'true';
+  if (/物理伤害/.test(main)) return 'physical';
+
+  // 5. trait-level default (elemental mentions alone are not enough).
+  if (/物理伤害/.test(traitText)) return 'physical';
+  if (/法术伤害/.test(traitText)) return 'arts';
   return 'physical';
+}
+
+// Enemy-side values from the local game data:
+// gamedata_const61fefd.json TermDescriptionDict.ba.dt.*2
+// buff_tablea22aef.json ep_break_{fire,water,dark,sanity}_enemy
+// ep_breakbuff_table1cdc7b (burst duration/cooldowns and enemy break duration)
+const EP_BURST_DATA = Object.freeze({
+  灼燃: { damage: 7000, cooldown: 10 },
+  侵蚀: { damage: 5000, cooldown: 8 },
+  神经: { damage: 6000, cooldown: 10 },
+  凋亡: { damage: 800 * 15, cooldown: 15 },
+});
+
+function estimateElementCycleDps({
+  sources = [],
+  dps = 0,
+  attack = 0,
+  attacksPerSecond = 0,
+  resistance = 0,
+  damageResistance = 0,
+  threshold = 1000,
+  recoverySpeed = 0,
+  horizon = 120,
+  recoveryMode = 'global',
+} = {}) {
+  // Local IL2CPP metadata exposes m_epArray for per-type accumulation, while
+  // EPController has one m_isInBreakRecovery timer and one recoveryType.
+  // Therefore gauges are separate, but bursts share one global recovery state.
+  const breakThreshold = Number(threshold);
+  if (!(breakThreshold > 0)) {
+    return {
+      cycleDps: 0,
+      details: {},
+      damageResistanceScale: 1,
+      recoveryMode,
+    };
+  }
+  const epResistanceScale =
+    1 - Math.min(95, Math.max(0, Number(resistance) || 0)) / 100;
+  const damageResistanceScale =
+    1 -
+    Math.min(95, Math.max(0, Number(damageResistance) || 0)) / 100;
+  const recoveryScale =
+    1 + Math.max(0, Number(recoverySpeed) || 0);
+  const grouped = new Map();
+  for (const source of sources) {
+    const type = source?.type;
+    if (!EP_BURST_DATA[type]) continue;
+    const ratio = Math.max(0, Number(source.ratio) || 0);
+    const flat = Math.max(0, Number(source.flatPerSecond) || 0);
+    const basisDps =
+      source.basis === 'attack'
+        ? Math.max(0, Number(attack) || 0) *
+          Math.max(0, Number(attacksPerSecond) || 0)
+        : Math.max(0, Number(dps) || 0);
+    const impairment = (basisDps * ratio + flat) * epResistanceScale;
+    if (!(impairment > 0)) continue;
+    grouped.set(type, (grouped.get(type) ?? 0) + impairment);
+  }
+
+  const details = {};
+  if (recoveryMode === 'independent' || grouped.size <= 1) {
+    let cycleDps = 0;
+    for (const [type, impairmentPerSecond] of grouped) {
+      const burst = EP_BURST_DATA[type];
+      const cooldown = burst.cooldown / recoveryScale;
+      const cycle =
+        breakThreshold / impairmentPerSecond + cooldown;
+      const burstsPerSecond = 1 / cycle;
+      const damageDps =
+        burstsPerSecond *
+        burst.damage *
+        Math.max(0, damageResistanceScale);
+      details[type] = {
+        impairmentPerSecond,
+        cooldown,
+        cycle,
+        burstsPerSecond,
+        uptime: Math.min(1, cooldown / cycle),
+        damageDps,
+      };
+      cycleDps += damageDps;
+    }
+    return { cycleDps, details, damageResistanceScale, recoveryMode };
+  }
+
+  const gauges = Object.fromEntries(
+    [...grouped.keys()].map((type) => [type, 0]),
+  );
+  const bursts = Object.fromEntries(
+    [...grouped.keys()].map((type) => [type, 0]),
+  );
+  const recoveryTime = Object.fromEntries(
+    [...grouped.keys()].map((type) => [type, 0]),
+  );
+  const duration = Math.max(0.1, Number(horizon) || 120);
+  const step = 0.05;
+  let cooldownRemaining = 0;
+  let recoveryType = '';
+  for (let time = 0; time < duration; time += step) {
+    if (cooldownRemaining > 0) {
+      const elapsed = Math.min(step, cooldownRemaining);
+      cooldownRemaining -= elapsed;
+      if (recoveryType) recoveryTime[recoveryType] += elapsed;
+      continue;
+    }
+    let triggeredType = '';
+    let bestProgress = -1;
+    for (const [type, impairmentPerSecond] of grouped) {
+      gauges[type] = Math.min(
+        breakThreshold,
+        gauges[type] + impairmentPerSecond * step,
+      );
+      const progress = gauges[type] / breakThreshold;
+      if (progress > bestProgress) {
+        bestProgress = progress;
+        triggeredType = type;
+      }
+    }
+    if (bestProgress >= 1) {
+      gauges[triggeredType] = 0;
+      bursts[triggeredType] += 1;
+      recoveryType = triggeredType;
+      cooldownRemaining =
+        EP_BURST_DATA[triggeredType].cooldown / recoveryScale;
+    } else {
+      triggeredType = '';
+    }
+  }
+
+  let cycleDps = 0;
+  for (const [type, impairmentPerSecond] of grouped) {
+    const burst = EP_BURST_DATA[type];
+    const cooldown = burst.cooldown / recoveryScale;
+    const burstsPerSecond = bursts[type] / duration;
+    const damageDps =
+      burstsPerSecond *
+      burst.damage *
+      Math.max(0, damageResistanceScale);
+    details[type] = {
+      impairmentPerSecond,
+      cooldown,
+      cycle: burstsPerSecond > 0 ? 1 / burstsPerSecond : Infinity,
+      burstsPerSecond,
+      uptime: recoveryTime[type] / duration,
+      damageDps,
+    };
+    cycleDps += damageDps;
+  }
+  return { cycleDps, details, damageResistanceScale, recoveryMode };
+}
+
+function estimateEpBurstDps({
+  dps = 0,
+  ratio = 0,
+  flatPerSecond = 0,
+  type = '',
+  resistance = 0,
+  damageResistance = 0,
+  threshold = 1000,
+  recoverySpeed = 0,
+} = {}) {
+  return estimateElementCycleDps({
+    sources: [{ type, ratio, flatPerSecond, basis: 'damage' }],
+    dps,
+    resistance,
+    damageResistance,
+    threshold,
+    recoverySpeed,
+  }).cycleDps;
+}
+
+function estimateSiracusaAbnormalDps({
+  prob = 0,
+  duration = 0,
+  damage = 0,
+  attemptsPerSecond = 0,
+  eligibleTypes = 0,
+  totalTypes = 4,
+  targets = 1,
+  cooldown = 0.2,
+} = {}) {
+  const statusCount = Math.max(0, Math.floor(Number(eligibleTypes) || 0));
+  const typeCount = Math.max(1, Math.floor(Number(totalTypes) || 4));
+  const attemptRate = Math.min(
+    1 / Math.max(0.05, Number(cooldown) || 0.2),
+    Math.max(0, Number(attemptsPerSecond) || 0),
+  );
+  const activeProb =
+    1 -
+    Math.exp(
+      -attemptRate *
+        Math.max(0, Number(prob) || 0) /
+        typeCount *
+        Math.max(0, Number(duration) || 0),
+    );
+  const uptime =
+    statusCount >= 2
+      ? Math.max(
+          0,
+          1 -
+            (1 - activeProb) ** statusCount -
+            statusCount *
+              activeProb *
+              (1 - activeProb) ** (statusCount - 1),
+        )
+      : 0;
+  return {
+    attemptsPerSecond: attemptRate,
+    activeProb,
+    uptime,
+    dps:
+      uptime *
+      Math.max(0, Number(damage) || 0) *
+      Math.max(1, Number(targets) || 1),
+  };
 }
 
 function classifySkillOutput(description = '') {
@@ -294,6 +724,7 @@ function calculateDpsModel({
   normalMultiplier = 1,
   activeMultiplier = 1,
   intervalDelta = 0,
+  activeIntervalOverride = 0,
   normalHits = 1,
   skillHits = 1,
   duration = 0,
@@ -306,9 +737,15 @@ function calculateDpsModel({
   const effectiveAttack = Math.max(0, attack) * (1 + attackBonus / 100);
   const normalSpeedScale = 1 + Math.max(-95, normalAspd) / 100;
   const activeSpeedScale = 1 + Math.max(-95, aspd) / 100;
-  const normalInterval = Math.max(0.05, baseInterval) / normalSpeedScale;
+  const normalInterval = quantizeAttackInterval(
+    Math.max(0.05, baseInterval) / normalSpeedScale,
+  );
   const activeInterval =
-    Math.max(0.05, baseInterval + intervalDelta) / activeSpeedScale;
+    activeIntervalOverride > 0
+      ? Math.max(0.05, activeIntervalOverride)
+      : quantizeAttackInterval(
+          Math.max(0.05, baseInterval + intervalDelta) / activeSpeedScale,
+        );
   const defenseScale = 1 - Math.min(1, Math.max(0, defensePenetration));
   const resistanceScale =
     1 - Math.min(1, Math.max(0, resistancePenetration));
@@ -362,6 +799,7 @@ function simulateFrameDps({
   normalMultiplier = 1,
   activeMultiplier = 1,
   intervalDelta = 0,
+  activeIntervalOverride = 0,
   normalHits = 1,
   skillHits = 1,
   duration = 0,
@@ -382,10 +820,15 @@ function simulateFrameDps({
   const normalSpeedScale = 1 + Math.max(-95, normalAspd) / 100;
   const activeSpeedScale =
     1 + Math.max(-95, normalAspd + aspd) / 100;
-  const normalInterval =
-    Math.max(0.05, baseInterval) / normalSpeedScale;
+  const normalInterval = quantizeAttackInterval(
+    Math.max(0.05, baseInterval) / normalSpeedScale,
+  );
   const activeInterval =
-    Math.max(0.05, baseInterval + intervalDelta) / activeSpeedScale;
+    activeIntervalOverride > 0
+      ? Math.max(0.05, activeIntervalOverride)
+      : quantizeAttackInterval(
+          Math.max(0.05, baseInterval + intervalDelta) / activeSpeedScale,
+        );
   const defenseScale = 1 - Math.min(1, Math.max(0, defensePenetration));
   const resistanceScale =
     1 - Math.min(1, Math.max(0, resistancePenetration));
@@ -710,7 +1153,7 @@ function evaluateAutoChessTrait(description = '', bondLayers = []) {
   };
 }
 
-function evaluateCovenant(bond, layer = 0, memberCount = 0) {
+function evaluateCovenant(bond, layer = 0, memberCount = 0, options = {}) {
   const currentLayer = Math.max(0, Number(layer) || 0);
   const currentMembers = Math.max(0, Number(memberCount) || 0);
   const boards = (bond.buffs ?? []).map((buff) => buff.Blackboard ?? {});
@@ -720,6 +1163,7 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
   };
   const effects = {
     attackBonus: 0,
+    flatAttack: 0,
     activeAttackBonus: 0,
     aspd: 0,
     damageMultiplier: 1,
@@ -732,6 +1176,16 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
     hpBonus: 0,
     defenseBonus: 0,
     damageReduction: 0,
+    abnormal: null,
+    blockedArtsScale: 0,
+    skillDeployTrue: null,
+    reflect: null,
+    randomElement: null,
+    enemyEpRecoverSpeed: 0,
+    kjeragColdMultiplier: 1,
+    egirDevour: false,
+    egirDamageValue: 0,
+    egirRespawns: 0,
   };
   const metrics = [];
   const add = (label, text) => metrics.push({ label, value: text });
@@ -748,11 +1202,30 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
   switch (bond.bondId) {
     case 'yanShip': {
       const attack = value(0, 'atk_base') + value(0, 'atk_per_stack') * currentLayer;
-      const extra = value(0, 'ex_atk_scale_base');
+      const extra = Math.min(
+        value(0, 'ex_atk_scale_max', Infinity),
+        value(0, 'ex_atk_scale_base') +
+          value(0, 'ex_atk_scale_per_stack') * currentLayer,
+      );
+      const requiredMembers = value(0, 'power_bond_char_cnt');
+      const recoverySpeed = Math.min(
+        value(1, 'ep_break_recover_speed_max', Infinity),
+        value(1, 'ep_break_recover_speed_base') +
+          value(1, 'ep_break_recover_speed_per_stack') * currentLayer,
+      );
       effects.attackBonus = attack * 100;
-      effects.extraDamageMultiplier = extra;
       add('攻击力', `+${pct(attack)}`);
-      add('元素附加伤害', pct(extra));
+      if (currentMembers >= requiredMembers) {
+        effects.randomElement = {
+          ratio: extra,
+          types: ['灼燃', '凋亡', '侵蚀', '神经'],
+        };
+        effects.enemyEpRecoverSpeed = recoverySpeed;
+        add('随机元素损伤', `${pct(extra)} 攻击力 / 次`);
+        add('敌人爆条全局恢复', `+${pct(recoverySpeed)}`);
+      } else {
+        add('随机元素损伤', `需 ${num(requiredMembers, 0)} 名不同【炎】干员`);
+      }
       break;
     }
     case 'sargonShip': {
@@ -774,15 +1247,27 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
       const frozen =
         value(0, 'base_ex_damage_scale') +
         value(0, 'ex_damage_scale_per_stack') * currentLayer;
-      effects.damageMultiplier = normal;
+      effects.damageMultiplier = options.enemyCold ? frozen : normal;
+      effects.kjeragColdMultiplier = frozen;
       add('常态伤害倍率', `×${num(normal, 3)}`);
       add('对寒冷/冻结', `×${num(frozen, 3)}`);
+      add('当前计算', options.enemyCold ? '按寒冷/冻结' : '按常态');
       break;
     }
     case 'egirShip': {
       const hp = value(0, 'base_max_hp') + value(0, 'max_hp_per_stack') * currentLayer;
       effects.hpBonus = hp * 100;
+      effects.egirDevour = true;
+      effects.egirDamageValue = value(0, 'damage_value');
+      effects.egirRespawns =
+        currentMembers >= value(0, 'power_bond_char_cnt')
+          ? value(0, 'max_free_respawn_cnt')
+          : 0;
       add('生命值', `+${pct(hp)}`);
+      add('吞噬', '继承基础攻击力与阻挡数');
+      if (effects.egirRespawns) {
+        add('首次复活', `${num(effects.egirRespawns, 0)} 名`);
+      }
       break;
     }
     case 'siracusaShip': {
@@ -798,7 +1283,25 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
       effects.aspd = aspd;
       add('部署后攻速', `+${num(aspd)}`);
       add('持续', `${num(duration)} 秒`);
-      add('异常真伤', `${num(damage)} / 秒`);
+      const needMembers = value(0, 'power_bond_char_cnt');
+      const prob = value(0, 'prob');
+      const abDuration = Math.min(
+        value(0, 'ab_buff_duration_max'),
+        value(0, 'ab_buff_duration_base') +
+          value(0, 'ab_buff_duration_per_stack') * currentLayer,
+      );
+      if (currentMembers >= needMembers) {
+        effects.abnormal = {
+          prob,
+          duration: abDuration,
+          damage,
+          cooldown: 0.2,
+          types: ['stunned', 'feared', 'cold', 'palsy'],
+        };
+        add('异常真伤', `${num(damage)} / 秒 · ${pct(prob)} 触发`);
+      } else {
+        add('异常真伤', `需 ${num(needMembers, 0)} 名叙拉古干员`);
+      }
       break;
     }
     case 'kazimierzShip': {
@@ -807,7 +1310,18 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
         value(0, 'max_atk_when_born_per_stack') * currentLayer;
       effects.attackBonus = attack * 100;
       add('攻击力上限', `+${pct(attack)}`);
-      add('技能/部署真伤', pct(value(0, 'ex_atk_scale_base')));
+      const trueScale = Math.min(
+        value(0, 'ex_atk_scale_max'),
+        value(0, 'ex_atk_scale_base') +
+          value(0, 'ex_atk_scale_per_stack') * currentLayer,
+      );
+      const trueWindow = value(0, 'ex_damage_duration');
+      if (currentMembers >= value(0, 'power_bond_char_cnt')) {
+        effects.skillDeployTrue = { scale: trueScale, window: trueWindow };
+        add('技能/部署真伤', `${pct(trueScale)} · ${num(trueWindow)} 秒`);
+      } else {
+        add('技能/部署真伤', `需 ${num(value(0, 'power_bond_char_cnt'), 0)} 人`);
+      }
       break;
     }
     case 'ursusShip': {
@@ -822,7 +1336,12 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
       effects.hpBonus = hp * 100;
       add('攻击力', `+${pct(attack)}`);
       add('生命值', `+${pct(hp)}`);
-      add('阻挡法伤', `${pct(blocked)} 攻击力 / 秒`);
+      if (currentMembers >= value(0, 'power_bond_char_cnt')) {
+        effects.blockedArtsScale = blocked;
+        add('阻挡法伤', `${pct(blocked)} 攻击力 / 秒`);
+      } else {
+        add('阻挡法伤', `需 ${num(value(0, 'power_bond_char_cnt'), 0)} 人`);
+      }
       break;
     }
     case 'iberiaShip': {
@@ -898,9 +1417,13 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
         value(0, 'damage_value_per_stack') * currentLayer;
       effects.hpBonus = hp * 100;
       effects.damageReduction = value(0, 'damage_resistance');
+      effects.reflect = {
+        damage: retaliation,
+        cd: Math.max(0.05, value(0, 'cd_duration', 0.2)),
+      };
       add('生命值', `+${pct(hp)}`);
       add('伤害分流', pct(value(0, 'damage_resistance')));
-      add('反伤', `${num(retaliation)} 法术`);
+      add('反伤', `${num(retaliation)} 法术 / ${num(value(0, 'cd_duration', 0.2), 1)}秒`);
       break;
     }
     case 'deputShip': {
@@ -981,8 +1504,17 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0) {
       break;
     }
     case 'suntShip': {
-      add('精锐攻击力', `+${pct(value(0, 'power_atk'))}`);
-      add('精锐技力消耗', `×${num(value(0, 'sp_ratio'), 2)}`);
+      const powerAtk = value(0, 'power_atk');
+      const spRatio = value(0, 'sp_ratio');
+      if (options.elite) {
+        effects.attackBonus = powerAtk * 100;
+        effects.spCostMultiplier *= spRatio;
+        add('精锐攻击力', `+${pct(powerAtk)}`);
+        add('精锐技力消耗', `×${num(spRatio, 2)}`);
+      } else {
+        add('精锐攻击力', `+${pct(powerAtk)}（仅精锐状态）`);
+        add('精锐技力消耗', `×${num(spRatio, 2)}（仅精锐状态）`);
+      }
       break;
     }
     case 'docShip': {
@@ -1029,6 +1561,9 @@ globalThis.ArkCalc = {
   resolveOperatorStats,
   estimateSkillHints,
   inferDamageType,
+  estimateEpBurstDps,
+  estimateElementCycleDps,
+  estimateSiracusaAbnormalDps,
   classifySkillOutput,
   mergeTalentEffects,
   calculateDpsModel,

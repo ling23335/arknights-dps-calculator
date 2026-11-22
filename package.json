@@ -12,6 +12,7 @@
     "extract:modules": "node scripts/extract-autochess-modules.mjs",
     "audit:roster": "node scripts/audit-roster.mjs",
     "audit:skills": "node scripts/audit-skill-data.mjs",
+    "audit:raw-bonds": "node scripts/audit-raw-autochess-bonds.mjs",
     "serve": "python -m http.server 4173 --bind 0.0.0.0"
   },
   "devDependencies": {

@@ -11,6 +11,9 @@ const {
   simulateFrameDps,
   sharedBossHp,
   inferDamageType,
+  estimateEpBurstDps,
+  estimateElementCycleDps,
+  estimateSiracusaAbnormalDps,
   classifySkillOutput,
   mergeTalentEffects,
   matchOperatorName,
@@ -24,6 +27,142 @@ test('physical damage subtracts defense', () => {
     damageAfterMitigation(1000, 'physical', { def: 320, res: 50 }),
     680,
   );
+});
+
+test('element burst uses the local enemy values, break threshold, and cooldown', () => {
+  assert.equal(
+    estimateEpBurstDps({
+      dps: 1000,
+      ratio: 0.1,
+      type: '灼燃',
+      threshold: 1000,
+    }),
+    350,
+  );
+  assert.equal(
+    estimateEpBurstDps({
+      dps: 1000,
+      ratio: 0.1,
+      type: '灼燃',
+      threshold: 2000,
+    }),
+    700 / 3,
+  );
+  assert.ok(
+    estimateEpBurstDps({
+      dps: 100000,
+      ratio: 0.1,
+      type: '灼燃',
+      threshold: 1000,
+    }) > 690,
+  );
+  assert.equal(
+    estimateEpBurstDps({
+      dps: 1250,
+      ratio: 0.1,
+      type: '侵蚀',
+      threshold: 1000,
+    }),
+    312.5,
+  );
+  assert.equal(
+    estimateEpBurstDps({
+      flatPerSecond: 100,
+      type: '神经',
+      threshold: 1000,
+    }),
+    300,
+  );
+  assert.equal(
+    estimateEpBurstDps({
+      dps: 1000,
+      ratio: 0.1,
+      type: '凋亡',
+      threshold: 1000,
+    }),
+    480,
+  );
+});
+
+test('element resistances affect accumulation and burst damage separately', () => {
+  assert.equal(
+    estimateEpBurstDps({
+      dps: 1000,
+      ratio: 0.1,
+      type: '灼燃',
+      threshold: 2000,
+      resistance: 10,
+      damageResistance: 10,
+    }),
+    195.51724137931035,
+  );
+});
+
+test('Siracusa true damage requires two applicable distinct abnormalities', () => {
+  const oneType = estimateSiracusaAbnormalDps({
+    prob: 0.3,
+    duration: 1.18,
+    damage: 1800,
+    attemptsPerSecond: 5,
+    eligibleTypes: 1,
+    targets: 6,
+  });
+  const fourTypes = estimateSiracusaAbnormalDps({
+    prob: 0.3,
+    duration: 1.18,
+    damage: 1800,
+    attemptsPerSecond: 5,
+    eligibleTypes: 4,
+    targets: 6,
+  });
+
+  assert.equal(oneType.uptime, 0);
+  assert.equal(oneType.dps, 0);
+  assert.equal(fourTypes.uptime > 0, true);
+  assert.equal(fourTypes.dps > 0, true);
+  assert.equal(fourTypes.attemptsPerSecond, 5);
+});
+
+test('element gauges accumulate separately by damage type', () => {
+  const sources = [
+    { type: '灼燃', ratio: 0.25, basis: 'damage' },
+    { type: '侵蚀', ratio: 0.25, basis: 'damage' },
+    { type: '神经', ratio: 0.25, basis: 'damage' },
+    { type: '凋亡', ratio: 0.25, basis: 'damage' },
+  ];
+  const result = estimateElementCycleDps({
+    sources,
+    dps: 1000,
+    threshold: 1000,
+  });
+
+  assert.deepEqual(Object.keys(result.details).sort(), [
+    '侵蚀',
+    '凋亡',
+    '灼燃',
+    '神经',
+  ]);
+  assert.equal(Object.values(result.details).every(
+    (detail) => detail.impairmentPerSecond === 250,
+  ), true);
+  assert.equal(result.recoveryMode, 'global');
+
+  const globalRecovery = estimateElementCycleDps({
+    sources,
+    dps: 1000,
+    threshold: 1000,
+    horizon: 120,
+    recoveryMode: 'global',
+  });
+  const separateRecovery = estimateElementCycleDps({
+    sources,
+    dps: 1000,
+    threshold: 1000,
+    horizon: 120,
+    recoveryMode: 'independent',
+  });
+  assert.equal(globalRecovery.cycleDps, 650);
+  assert.equal(separateRecovery.cycleDps > globalRecovery.cycleDps, true);
 });
 
 test('shared boss hp scales with the room player count', () => {
@@ -127,8 +266,24 @@ test('skill hints extract attack multiplier and interval change', () => {
     '攻击力+130%，攻击间隔大幅度缩短(-1.1)，攻击范围增大',
   );
 
-  assert.equal(hints.attackMultiplier, 2.3);
+  assert.equal(hints.attackBonus, 1.3);
+  assert.equal(hints.attackMultiplier, 1);
   assert.equal(hints.intervalDelta, -1.1);
+});
+
+test('Volcano attack bonus is not counted again as a direct damage multiplier', () => {
+  const hints = estimateSkillHints(
+    '攻击力+130%，攻击范围增大，攻击间隔大幅度缩短，攻击变为随机对攻击范围内至多6个敌人发射熔岩',
+    {
+      atk: 1.3,
+      base_attack_time: -1.1,
+      'attack@max_target': 6,
+    },
+  );
+
+  assert.equal(hints.attackBonus, 1.3);
+  assert.equal(hints.attackMultiplier, 1);
+  assert.equal(hints.targetCap, 6);
 });
 
 test('skill hints extract attack speed bonus', () => {
@@ -206,10 +361,12 @@ test('skill hints parse direct scaling, ramps and multi-hit wording', () => {
     [extraAttack.attackMultiplier, extraAttack.skillHits],
     [4, 1],
   );
-  assert.equal(lemuen.attackMultiplier, 3.025);
+  assert.equal(lemuen.attackMultiplier, 1);
+  assert.equal(lemuen.attackBonus, 2.025);
   assert.equal(rampedArts.attackMultiplier, 0.75);
   assert.equal(healing.attackMultiplier, 1);
-  assert.equal(groupedBuff.attackMultiplier, 2.3);
+  assert.equal(groupedBuff.attackMultiplier, 1);
+  assert.equal(groupedBuff.attackBonus, 1.3);
 });
 
 test('skill hints prefer structured local Blackboard values', () => {
@@ -271,12 +428,144 @@ test('skill hints prefer structured local Blackboard values', () => {
   assert.equal(lemuen.attackMultiplier, 3.025);
 });
 
-test('damage type prefers explicit art damage in the skill text', () => {
-  assert.equal(inferDamageType('攻击造成法术伤害', '造成物理伤害'), 'arts');
+test('skill hints read local elemental impairment ratios and flat values', () => {
+  const scaled = estimateSkillHints(
+    '每秒造成法术伤害和相当于法术伤害30%的灼燃损伤',
+    { element_damage_scale: 0.3 },
+  );
+  const flat = estimateSkillHints(
+    '每秒受到200点侵蚀损伤',
+    { 'attack@water_element': 200 },
+  );
+
+  assert.deepEqual(scaled.ep, {
+    ratio: 0.3,
+    flatPerSecond: 0,
+    type: '灼燃',
+    basis: 'damage',
+  });
+  assert.deepEqual(flat.ep, {
+    ratio: 0,
+    flatPerSecond: 200,
+    type: '侵蚀',
+    basis: 'damage',
+  });
+});
+
+test('skill hints retain local single-target, capped, and area target rules', () => {
+  const single = estimateSkillHints('造成相当于攻击力200%的物理伤害', {});
+  const capped = estimateSkillHints(
+    '同时攻击3名敌人，造成相当于攻击力180%的法术伤害',
+    { 'attack@max_target': 3 },
+  );
+  const area = estimateSkillHints(
+    '攻击范围内所有敌人并造成群体法术伤害',
+    {},
+  );
+  const directional = estimateSkillHints(
+    '对前方范围内的地面敌人造成攻击力300%的法术伤害',
+    {},
+  );
+  const linear = estimateSkillHints(
+    '攻击对直线范围造成攻击力200%的物理伤害',
+    {},
+  );
+
+  assert.equal(single.targetCap, 1);
+  assert.equal(capped.targetCap, 3);
+  assert.equal(area.targetCap, Infinity);
+  assert.equal(directional.targetCap, Infinity);
+  assert.equal(linear.targetCap, Infinity);
+});
+
+test('Talulah S3 cluster fire explosion uses area target coverage', () => {
+  const hints = estimateSkillHints(
+    '攻击力+140%；停止攻击以持续引导场地进入以下状态：每2.67秒在5行范围内，朝部署方向召唤“簇火”，“簇火”碰到敌人时爆炸造成攻击力250%的范围法术伤害',
+    {
+      atk: 1.4,
+      normal_interval: 2.67,
+      overload_interval: 2,
+    },
+  );
+
+  assert.equal(hints.attackBonus, 1.4);
+  assert.equal(hints.attackMultiplier, 2.5);
+  assert.equal(hints.fixedActiveInterval, 2.67);
+  assert.equal(hints.targetCap, Infinity);
+});
+
+test('element hints retain attack scaling, priority types, and burst bonuses', () => {
+  const attackScaled = estimateSkillHints(
+    '攻击附带相当于攻击力25%的神经损伤',
+    { 'attack@ep_damage_ratio': 0.25 },
+  );
+  const priority = estimateSkillHints(
+    '攻击同时附带18%攻击力的神经损伤（优先）、灼燃损伤、凋亡损伤',
+    { ep_damage_ratio: 0.18 },
+  );
+  const perHit = estimateSkillHints(
+    '若目标处于凋亡损伤爆发期间则额外造成相当于攻击力50%的元素伤害',
+    { 'attack@extra_ep_damage_scale': 0.5 },
+  );
+  const perSecond = estimateSkillHints(
+    '攻击处于凋亡损伤爆发期间的敌人时每秒受到攻击力30%的元素伤害',
+    { element_atk_scale: 0.3 },
+  );
+
+  assert.equal(attackScaled.ep.basis, 'attack');
+  assert.deepEqual(priority.epSources.map((source) => source.type), [
+    '神经',
+  ]);
+  assert.equal(perHit.epBurst.perHitScale, 0.5);
+  assert.equal(perHit.epBurst.perSecondScale, 0);
+  assert.equal(perSecond.epBurst.perHitScale, 0);
+  assert.equal(perSecond.epBurst.perSecondScale, 0.3);
+});
+
+test('local elemental operators use the correct attack-or-damage basis', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/operators-autochess.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const operator = (name) =>
+    snapshot.operators.find((item) => item.name === name);
+  const skillHint = (name, skillName) => {
+    const skill = operator(name).skills.find(
+      (item) => item.name === skillName,
+    );
+    const level = skill.levels.M3 ?? Object.values(skill.levels)[0];
+    return estimateSkillHints(
+      level.description,
+      level.blackboard,
+      level.maxChargeTime,
+    );
+  };
+
+  assert.equal(skillHint('余', '今日做东').ep.basis, 'attack');
+  assert.equal(skillHint('酒神', '群体性谵妄').ep.basis, 'attack');
+  assert.equal(skillHint('妮芙', '笞心击').ep.basis, 'damage');
+  assert.equal(skillHint('克莱门莎', '冲蚀').ep.basis, 'damage');
+  assert.equal(skillHint('真言', '共鸣溃缩').ep.basis, 'damage');
+  assert.equal(skillHint('烛煌', '炙手之援').ep.basis, 'damage');
+});
+
+test('damage type uses the main hit type and falls back to the trait', () => {
+  // The skill's main hit wins over the operator's normal-attack trait.
+  assert.equal(inferDamageType('攻击造成法术伤害', '造成物理伤害'), 'physical');
   assert.equal(inferDamageType('攻击造成物理伤害', ''), 'physical');
+  // Trait is the fallback when the skill text carries no damage type.
+  assert.equal(inferDamageType('攻击造成法术伤害', ''), 'arts');
+  // Explicit type conversion still wins over everything.
   assert.equal(
     inferDamageType('攻击造成法术伤害', '伤害类型变为真实'),
     'true',
+  );
+  // Add-on elemental damage no longer overrides a physical/arts main hit.
+  assert.equal(
+    inferDamageType('攻击造成法术伤害', '造成攻击力200%的物理伤害并额外造成元素伤害'),
+    'physical',
   );
 });
 
@@ -457,6 +746,98 @@ test('current arcane covenant scales extra damage and resistance shred', () => {
   assert.equal(result.effects.resistanceShred, 32.5);
 });
 
+test('six Yan grants random elemental impairment and enemy break recovery', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/covenants.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const yan = snapshot.covenants.find(
+    (bond) => bond.bondId === 'yanShip',
+  );
+  const inactive = evaluateCovenant(yan, 100, 5);
+  const active = evaluateCovenant(yan, 100, 6);
+
+  assert.equal(inactive.effects.randomElement, null);
+  assert.equal(active.effects.extraDamageMultiplier, 0);
+  assert.equal(active.effects.randomElement.ratio, 0.06);
+  assert.deepEqual(active.effects.randomElement.types, [
+    '灼燃',
+    '凋亡',
+    '侵蚀',
+    '神经',
+  ]);
+  assert.equal(
+    Math.abs(active.effects.enemyEpRecoverSpeed - 0.7) < 1e-9,
+    true,
+  );
+
+  const randomDamage = estimateElementCycleDps({
+    sources: active.effects.randomElement.types.map((type) => ({
+      type,
+      ratio: active.effects.randomElement.ratio / 4,
+      basis: 'attack',
+    })),
+    attack: 1668,
+    attacksPerSecond: 1.3,
+    threshold: 2000,
+    recoverySpeed: active.effects.enemyEpRecoverSpeed,
+    horizon: 120,
+  });
+  assert.equal(randomDamage.cycleDps, 250);
+});
+
+test('Aegir devour and Kjerag cold multipliers match local Blackboard data', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/covenants.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const egir = snapshot.covenants.find(
+    (bond) => bond.bondId === 'egirShip',
+  );
+  const kjerag = snapshot.covenants.find(
+    (bond) => bond.bondId === 'kjeragShip',
+  );
+  const egirResult = evaluateCovenant(egir, 100, 6);
+  const kjeragNormal = evaluateCovenant(kjerag, 100, 6);
+  const kjeragCold = evaluateCovenant(kjerag, 100, 6, {
+    enemyCold: true,
+  });
+
+  assert.equal(egirResult.effects.hpBonus, 135);
+  assert.equal(egirResult.effects.egirDevour, true);
+  assert.equal(egirResult.effects.egirDamageValue, 5000);
+  assert.equal(egirResult.effects.egirRespawns, 3);
+  assert.equal(kjeragNormal.effects.damageMultiplier, 1.25);
+  assert.equal(kjeragCold.effects.damageMultiplier, 2.35);
+  assert.equal(kjeragCold.effects.kjeragColdMultiplier, 2.35);
+});
+
+test('Kjerag snow giant resolves to the local hidden enemy profile', () => {
+  const snapshot = JSON.parse(
+    fs.readFileSync(
+      new URL('../data/enemies.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const giant = snapshot.enemies.find(
+    (enemy) => enemy.enemyId === 'enemy_9024_acsgnt',
+  );
+
+  assert.equal(giant.name, '“不眠雪山”');
+  assert.equal(giant.baseHp, 21000);
+  assert.equal(giant.baseAttack, 920);
+  assert.equal(giant.baseDefense, 600);
+  assert.equal(giant.baseResistance, 30);
+  assert.equal(giant.attackInterval, 3);
+  assert.equal(giant.talentBlackboard['BondBuff.stackStep'], 3);
+  assert.equal(giant.talentBlackboard['FrozenBreak.atk_scale'], 3.5);
+  assert.equal(giant.talentBlackboard['SwitchMode.interval'], 5);
+});
+
 test('dps model supports percentage defense and resistance penetration', () => {
   const physical = calculateDpsModel({
     attack: 1000,
@@ -548,18 +929,18 @@ test('instant skills can recharge after their triggering attack', () => {
   assert.equal(result.activeDps > 0, true);
 });
 
-test('charged instant skills use SP recovery blocks and can lower DPS at high attack speed', () => {
-  const simulate = (normalAspd) =>
+test('charged instant skills use SP recovery blocks and frame-quantized intervals', () => {
+  const simulate = (options = {}) =>
     simulateFrameDps({
       attack: 100,
       baseInterval: 1.6,
       damageType: 'true',
       enemy: { def: 0, res: 0, hp: Infinity },
-      normalAspd,
       activeMultiplier: 4,
       duration: 0,
       tick: 1 / 60,
       horizon: 60,
+      ...options,
       sp: {
         mode: 'natural',
         cost: 5,
@@ -568,16 +949,20 @@ test('charged instant skills use SP recovery blocks and can lower DPS at high at
         maxCharges: 3,
         blockFrames: 36,
         frameRate: 30,
+        ...(options.sp ?? {}),
       },
     });
 
-  const slow = simulate(17);
-  const fast = simulate(18);
+  const blocked = simulate();
+  const unblocked = simulate({ sp: { blockFrames: 0 } });
+  assert.equal(unblocked.skillCasts > blocked.skillCasts, true);
+  assert.equal(blocked.skillHits, blocked.skillCasts);
 
-  assert.equal(slow.skillCasts > fast.skillCasts, true);
-  assert.equal(slow.cycleDps > fast.cycleDps, true);
-  assert.equal(slow.skillHits, slow.skillCasts);
-  assert.equal(fast.skillHits, fast.skillCasts);
+  // 30 fps frame quantization: 1.6s = 48 frames; +33 ASPD -> 37 frames;
+  // +34 ASPD -> 36 frames, matching the in-game 36-frame SP block threshold.
+  assert.equal(blocked.normalInterval, 48 / 30);
+  assert.equal(simulate({ normalAspd: 33 }).normalInterval, 37 / 30);
+  assert.equal(simulate({ normalAspd: 34 }).normalInterval, 36 / 30);
 });
 
 test('natural SP recovery accelerates duration skills through the same state machine', () => {

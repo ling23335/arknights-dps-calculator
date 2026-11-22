@@ -70,6 +70,176 @@
     'arcaneShip',
     'visiShip',
   ];
+  const covenantRankingData = [
+    {
+      id: 'victoriaShip',
+      stable: 1,
+      ceiling: 5,
+      wave: 4,
+      metric: '伤害 ×2.05 + 装备攻击',
+      note: '稳定乘区与装备联动，不依赖异常或站位。',
+    },
+    {
+      id: 'kazimierzShip',
+      stable: 2,
+      ceiling: 4,
+      wave: 5,
+      metric: '攻击上限 +150% + 65% 真伤',
+      note: '部署叠满后倍率高，技能或部署窗口附带真伤。',
+    },
+    {
+      id: 'lethaniaShip',
+      stable: 3,
+      ceiling: 6,
+      wave: 6,
+      metric: '攻击 +130%',
+      note: '干员与召唤物同享，触发条件少。',
+    },
+    {
+      id: 'ursusShip',
+      stable: 4,
+      ceiling: 7,
+      wave: 7,
+      metric: '攻击 +110% + 阻挡法伤',
+      note: '持续接敌时额外获得 75% 攻击力法伤。',
+    },
+    {
+      id: 'yanShip',
+      stable: 5,
+      ceiling: 8,
+      wave: 9,
+      metric: '攻击 +113% + 六炎随机元素',
+      note: '三炎本体稳定；六炎受随机槽和全局爆条恢复限制。',
+    },
+    {
+      id: 'siracusaShip',
+      stable: 6,
+      ceiling: 9,
+      wave: 8,
+      metric: '攻速 +105 + 异常真伤',
+      note: '攻击输出才触发随机异常，内建 0.2 秒冷却；目标少于 2 种可施加异常时真伤为 0。',
+    },
+    {
+      id: 'kjeragShip',
+      stable: 7,
+      ceiling: 3,
+      wave: 2,
+      metric: '伤害 ×1.25 / ×2.35',
+      note: '稳定状态普通；能稳定寒冷或冻结时进入顶层，并附带雪山巨人。',
+    },
+    {
+      id: 'egirShip',
+      stable: 8,
+      ceiling: 10,
+      wave: 10,
+      metric: '生命 +135% + 吞噬攻击',
+      note: '吞噬基础攻击可显著提高单干员输出，但必须扣除被吞噬干员和站位成本。',
+    },
+    {
+      id: 'sargonShip',
+      stable: 9,
+      ceiling: 2,
+      wave: 1,
+      metric: '叠层攻速 + 沙地伤害',
+      note: '满技能叠层上限很高；启动、站位和持续时间拖低稳定期望。',
+    },
+    {
+      id: 'iberiaShip',
+      stable: 10,
+      ceiling: 1,
+      wave: 3,
+      metric: '10 层持续法伤 + 弹射',
+      note: '叠满后约为每秒 340% 攻击力持续法伤；需要长时间维持命中。',
+    },
+    {
+      id: 'preciShip',
+      stable: 1,
+      ceiling: 2,
+      wave: 2,
+      metric: '攻击 +130% + 30% 双穿透',
+      note: '终极高防高抗环境极强，远程覆盖范围广。',
+    },
+    {
+      id: 'arcaneShip',
+      stable: 2,
+      ceiling: 1,
+      wave: 1,
+      metric: '附带 60% 攻击法伤 + 削 35 法抗',
+      note: '高法抗目标下穿透收益接近独立乘区。',
+    },
+    {
+      id: 'skillfulShip',
+      stable: 3,
+      ceiling: 4,
+      wave: 3,
+      metric: '攻速 +110',
+      note: '普通间隔技能接近翻倍；固定间隔技能收益较低。',
+    },
+    {
+      id: 'raidShip',
+      stable: 4,
+      ceiling: 3,
+      wave: 4,
+      metric: '全队攻速 +50 + 条件攻击 +125%',
+      note: '覆盖所有干员；再次部署和空场条件拉高上限。',
+    },
+    {
+      id: 'emptyShip',
+      stable: 5,
+      ceiling: 7,
+      wave: 6,
+      metric: '伤害 ×1.2 / ×1.4 + 20% 减伤',
+      note: '简单稳定，精锐状态进一步提高伤害。',
+    },
+    {
+      id: 'soloShip',
+      stable: 6,
+      ceiling: 8,
+      wave: 7,
+      metric: '攻击 +60% + 初始技力 +15',
+      note: '数值直接，但只能有一名独行干员时生效。',
+    },
+    {
+      id: 'suntShip',
+      stable: 7,
+      ceiling: 9,
+      wave: 9,
+      metric: '精锐攻击 +30% + 技力消耗 ×0.7',
+      note: '高费精锐技能收益最高，普通技能一般。',
+    },
+    {
+      id: 'steadShip',
+      stable: 8,
+      ceiling: 5,
+      wave: 5,
+      metric: '反伤 + 分摊 + 脆弱',
+      note: '高频受击时反伤理论值极高，但不是稳定主动输出。',
+    },
+    {
+      id: 'swiftShip',
+      stable: 9,
+      ceiling: 6,
+      wave: 8,
+      metric: '技能结束返还技力',
+      note: '低消耗短 CD 技能可产生质变，长 CD 技能收益有限。',
+    },
+    {
+      id: 'docShip',
+      stable: 10,
+      ceiling: 10,
+      wave: 10,
+      metric: '治疗 + 庇护 + 元素损伤恢复',
+      note: '生存兜底盟约，只有极少数受击或元素环境转成输出。',
+    },
+  ];
+  const utilityCovenantIds = [
+    'deputShip',
+    'visiShip',
+    'miraShip',
+    'investShip',
+    'indomShip',
+    'maniShip',
+  ];
   const state = {
     enemy: {
       def: enemyMap.get(defaultEnemyId)?.defense ?? 500,
@@ -77,8 +247,12 @@
       useStronghold: true,
       selectedId: defaultEnemyId,
       roomSize: 4,
+      targetCount: 6,
     },
     axis: 'covenant',
+    logAxis: false,
+    rankingGroup: 'core',
+    rankingMode: 'wave',
     chartCovenantId: defaultCovenantIds[0],
     skillfulAura: true,
     activeSlot: 0,
@@ -115,6 +289,9 @@
 
   const slotsElement = document.querySelector('#slots');
   const operatorSearchList = document.querySelector('#operator-search-list');
+  const rankingBoard = document.querySelector('#ranking-board');
+  const rankingUtilityList = document.querySelector('#ranking-utility-list');
+  const rankingControls = document.querySelector('.ranking-controls');
   const covenantPanel = document.querySelector('#covenant-panel');
   const covenantSummaryElement = document.querySelector('#covenant-summary');
   const covenantListElement = document.querySelector('#covenant-list');
@@ -198,6 +375,9 @@
       level: 'M3',
       support: true,
       trust: true,
+      elite: false,
+      devourBaseAttack: 0,
+      kjeragCold: false,
       potential: 6,
       module: '',
       equipmentId: '',
@@ -207,6 +387,12 @@
       activeMultiplier: 1,
       aspd: 0,
       intervalDelta: 0,
+      activeIntervalOverride: 0,
+      epRatio: 0,
+      epFlatPerSecond: 0,
+      epType: '',
+      epSources: [],
+      epBurstSources: [],
       duration: 0,
       cooldown: 0,
       charges: 1,
@@ -216,6 +402,8 @@
       spMode: 'natural',
       normalHits: 1,
       skillHits: 1,
+      normalTargetCap: 1,
+      skillTargetCap: 1,
       defenseIgnore: 0,
       resistanceIgnore: 0,
       damageType: '',
@@ -232,11 +420,19 @@
       slot.activeMultiplier = 1;
       slot.aspd = 0;
       slot.intervalDelta = 0;
+      slot.activeIntervalOverride = 0;
+      slot.epRatio = 0;
+      slot.epFlatPerSecond = 0;
+      slot.epType = '';
+      slot.epSources = [];
+      slot.epBurstSources = [];
       slot.duration = 0;
       slot.cooldown = 0;
       slot.charges = 1;
       slot.chargeBased = false;
       slot.skillHits = 1;
+      slot.normalTargetCap = 1;
+      slot.skillTargetCap = 1;
       slot.spCost = 0;
       slot.spInitial = 0;
       slot.spMode = 'natural';
@@ -252,11 +448,19 @@
       slot.activeMultiplier = 1;
       slot.aspd = 0;
       slot.intervalDelta = 0;
+      slot.activeIntervalOverride = 0;
+      slot.epRatio = 0;
+      slot.epFlatPerSecond = 0;
+      slot.epType = '';
+      slot.epSources = [];
+      slot.epBurstSources = [];
       slot.duration = 0;
       slot.cooldown = 0;
       slot.charges = 1;
       slot.chargeBased = false;
       slot.skillHits = 1;
+      slot.normalTargetCap = 1;
+      slot.skillTargetCap = 1;
       slot.spCost = 0;
       slot.spInitial = 0;
       slot.spMode = 'natural';
@@ -275,13 +479,86 @@
     );
     slot.activeMultiplier = round(hints.attackMultiplier);
     slot.aspd = hints.aspd;
-    slot.intervalDelta = Number.isFinite(level?.intervalDelta)
-      ? level.intervalDelta
-      : hints.intervalDelta;
+    slot.attackBonus = round((hints.attackBonus ?? 0) * 100);
+    slot.activeIntervalOverride = hints.fixedActiveInterval || 0;
+    const talentElementSources = [];
+    const talentBurstSources = [];
+    const latestTalents = new Map();
+    for (const talent of operator.talents ?? []) {
+      const key = talent.group || talent.name;
+      const previous = latestTalents.get(key);
+      if (
+        !previous ||
+        (talent.phase ?? 0) > (previous.phase ?? 0) ||
+        ((talent.phase ?? 0) === (previous.phase ?? 0) &&
+          (talent.level ?? 0) >= (previous.level ?? 0))
+      ) {
+        latestTalents.set(key, talent);
+      }
+    }
+    for (const talent of latestTalents.values()) {
+      if (
+        (talent.mechanics ?? []).some((mechanic) =>
+          ['onDeath', 'blocking', 'conditionalHp', 'onHit'].includes(
+            mechanic,
+          ),
+        )
+      ) {
+        continue;
+      }
+      const talentHints = calc.estimateSkillHints(
+        talent.description ?? '',
+        talent.blackboard ?? {},
+      );
+      talentElementSources.push(
+        ...(talentHints.epSources ?? []).filter(
+          (source) => source.ratio > 0 || source.flatPerSecond > 0,
+        ),
+      );
+      if (
+        talentHints.ep?.type &&
+        (talentHints.epBurst?.perHitScale ||
+          talentHints.epBurst?.perSecondScale ||
+          talentHints.epBurst?.perBreakScale)
+      ) {
+        talentBurstSources.push({
+          type: talentHints.ep.type,
+          ...talentHints.epBurst,
+        });
+      }
+    }
+    slot.epSources = [
+      ...(hints.epSources ?? []).filter(
+        (source) => source.ratio > 0 || source.flatPerSecond > 0,
+      ),
+      ...talentElementSources,
+    ];
+    slot.epBurstSources = [
+      ...(hints.ep?.type &&
+      (hints.epBurst?.perHitScale ||
+        hints.epBurst?.perSecondScale ||
+        hints.epBurst?.perBreakScale)
+        ? [{ type: hints.ep.type, ...hints.epBurst }]
+        : []),
+      ...talentBurstSources,
+    ];
+    slot.epRatio = slot.epSources[0]?.ratio ?? 0;
+    slot.epFlatPerSecond = slot.epSources[0]?.flatPerSecond ?? 0;
+    slot.epType = slot.epSources[0]?.type ?? '';
+    slot.intervalDelta =
+      hints.absoluteActiveInterval > 0
+        ? hints.absoluteActiveInterval -
+          (operator.stats.attackInterval ?? 0)
+        : Number.isFinite(level?.intervalDelta)
+          ? level.intervalDelta
+          : hints.intervalDelta;
     slot.duration = level?.duration ?? 0;
     slot.charges = hints.charges || 1;
     slot.chargeBased = Boolean(hints.chargeBased);
     slot.skillHits = hints.skillHits || 1;
+    slot.normalTargetCap =
+      calc.estimateSkillHints(operator.trait, {}).targetCap || 1;
+    slot.skillTargetCap = hints.targetCap || 1;
     slot.spCost = level?.cost ?? 0;
     slot.spInitial = level?.initial ?? 0;
     slot.spMode =
@@ -464,6 +741,26 @@
     if (state.commands.enabled) {
       for (const command of appliedCommands) {
         mergeReferenceStats(effects, command.autoStats);
+        if (command.name === '众志合一') {
+          const activeBonds = state.covenants.enabled
+            ? selectedBonds().filter((bond) => {
+                const settings = state.covenants.settings[bond.bondId];
+                return settings && settings.members >= bond.activeCount;
+              }).length
+            : 0;
+          effects.attackBonus +=
+            activeBonds >= 5
+              ? 40
+              : activeBonds === 4
+                ? 30
+                : activeBonds === 3
+                  ? 20
+                  : 0;
+        }
+        if (command.name === '统御号令' && slot.elite) {
+          const eliteCount = state.slots.filter((item) => item.elite).length;
+          effects.attackBonus += 10 * eliteCount;
+        }
       }
     }
     return {
@@ -532,6 +829,7 @@
       initialSp: 0,
       extraDamageMultiplier: 0,
       damageMultiplier: 1,
+      flatAttack: 0,
       resistanceIgnore: 0,
       flatHitDamage: 0,
     };
@@ -637,6 +935,97 @@
     return String(value ?? '').replace(/\{\d+:[^}]+\}/g, '动态值');
   }
 
+  function renderCovenantRanking() {
+    if (!rankingBoard) return;
+    const groupType = state.rankingGroup === 'core' ? 2 : 1;
+    const utilityIds = new Set(utilityCovenantIds);
+    const mode = state.rankingMode;
+    const rows = covenantRankingData
+      .filter((row) => {
+        const bond = covenantMap.get(row.id);
+        return (
+          bond &&
+          bond.bondType === groupType &&
+          !utilityIds.has(row.id)
+        );
+      })
+      .sort((a, b) => a[mode] - b[mode]);
+    rankingBoard.innerHTML = rows
+      .map((row, index) => {
+        const bond = covenantMap.get(row.id);
+        const secondary =
+          mode === 'stable'
+            ? row.ceiling
+            : mode === 'wave'
+              ? row.ceiling
+              : row.stable;
+        const secondaryLabel =
+          mode === 'stable'
+            ? '理论上限'
+            : mode === 'wave'
+              ? '理论上限'
+              : '稳定期望';
+        const primaryLabel =
+          mode === 'stable'
+            ? '稳定'
+            : mode === 'wave'
+              ? '群怪'
+              : '上限';
+        return `
+          <article class="ranking-row rank-${Math.min(3, index + 1)}">
+            <span class="ranking-number">${index + 1}</span>
+            <div class="ranking-copy">
+              <div class="ranking-name">
+                <h3>${escapeHtml(bond.name)}</h3>
+                <span>${escapeHtml(row.metric)}</span>
+              </div>
+              <p>${escapeHtml(row.note)}</p>
+            </div>
+            <div class="ranking-secondary">
+              <b>${primaryLabel} #${index + 1}</b>
+              <small>${secondaryLabel} #${secondary}</small>
+            </div>
+          </article>`;
+      })
+      .join('');
+    const scopeNote = document.querySelector('#ranking-scope-note');
+    if (scopeNote) {
+      scopeNote.textContent =
+        mode === 'wave'
+          ? `按本地满层数据、核心 6 人档与当前 ${state.enemy.targetCount} 名同时目标评估群怪总伤；叙拉古需目标至少能同时承受 2 种异常。`
+          : '按本地满层数据、核心 6 人档与增益全部生效计算；稳定榜计入启动和覆盖率限制，上限榜按机制全部吃满。';
+    }
+    rankingControls
+      ?.querySelectorAll('[data-ranking-group]')
+      .forEach((button) => {
+        button.setAttribute(
+          'aria-pressed',
+          String(button.dataset.rankingGroup === state.rankingGroup),
+        );
+      });
+    rankingControls
+      ?.querySelectorAll('[data-ranking-mode]')
+      .forEach((button) => {
+        button.setAttribute(
+          'aria-pressed',
+          String(button.dataset.rankingMode === state.rankingMode),
+        );
+      });
+    if (rankingUtilityList) {
+      rankingUtilityList.innerHTML = utilityCovenantIds
+        .map((id) => covenantMap.get(id))
+        .filter(Boolean)
+        .map(
+          (bond) => `
+            <span>
+              <b>${escapeHtml(bond.name)}</b>
+              ${escapeHtml(bond.effectDescription.split('\n')[0])}
+            </span>`,
+        )
+        .join('');
+    }
+  }
+
   function selectedBonds() {
     return state.covenants.selectedIds
       .map((bondId) => covenantMap.get(bondId))
@@ -658,8 +1047,21 @@
     if (bond.bondId === 'skillfulShip' && state.skillfulAura) {
       return true;
     }
+    // 绝技：所有干员的精锐状态都能激活，成员表为空。
+    if (bond.bondId === 'suntShip') {
+      return true;
+    }
     return bond.members.some(
       (member) => member.charId === operator.id || member.name === operator.name,
+    );
+  }
+
+  function bondAffectsSlot(bond, slot) {
+    const operator = findOperator(slot);
+    if (bondMatchesOperator(bond, operator)) return true;
+    if (!state.equipment.enabled) return false;
+    return (
+      equipmentMap.get(slot.conversionEquipmentId)?.bondId === bond.bondId
     );
   }
 
@@ -674,11 +1076,15 @@
     const effects = evaluation.effects;
     const hasDpsEffect = Boolean(
       effects.attackBonus ||
+      effects.flatAttack ||
+      effects.egirDevour ||
       effects.activeAttackBonus ||
       effects.aspd ||
       effects.damageMultiplier !== 1 ||
       effects.resistanceShred ||
       effects.extraDamageMultiplier ||
+      effects.randomElement ||
+      effects.enemyEpRecoverSpeed ||
       effects.defensePenetration ||
       effects.resistancePenetration ||
       effects.initialSp,
@@ -726,6 +1132,7 @@
       activeAttackBonus: 0,
       aspd: 0,
       damageMultiplier: 1,
+      flatAttack: 0,
       defensePenetration: 0,
       resistancePenetration: 0,
       resistanceShred: 0,
@@ -735,6 +1142,16 @@
       hpBonus: 0,
       defenseBonus: 0,
       damageReduction: 0,
+      abnormal: null,
+      blockedArtsScale: 0,
+      skillDeployTrue: null,
+      reflect: null,
+      randomElement: null,
+      enemyEpRecoverSpeed: 0,
+      egirDevour: false,
+      egirDamageValue: 0,
+      egirRespawns: 0,
+      snowGiant: null,
     };
     const applied = [];
     if (!state.covenants.enabled) {
@@ -754,10 +1171,17 @@
       ) {
         continue;
       }
-      const effectiveLayer =
+      let effectiveLayer =
         layerCap === null || bond.bondId !== state.chartCovenantId
           ? settings.layer
           : Math.min(settings.layer, Math.max(0, layerCap));
+      if (state.commands.enabled) {
+        const commandIds = new Set(state.commands.selectedIds);
+        if (commandIds.has('aceffect_band_89')) effectiveLayer += 9;
+        if (commandIds.has('aceffect_band_31')) effectiveLayer += 1;
+        if (commandIds.has('aceffect_band_32')) effectiveLayer += 2;
+        if (commandIds.has('aceffect_band_33')) effectiveLayer += 3;
+      }
       if (
         layerCap !== null &&
         bond.bondId === state.chartCovenantId &&
@@ -769,10 +1193,15 @@
         bond,
         effectiveLayer,
         settings.members,
+        {
+          elite: Boolean(slot.elite),
+          enemyCold: Boolean(slot.kjeragCold),
+        },
       );
       if (!evaluation.active) continue;
       const item = evaluation.effects;
       effects.attackBonus += item.attackBonus;
+      effects.flatAttack += item.flatAttack;
       effects.activeAttackBonus += item.activeAttackBonus;
       effects.aspd += item.aspd;
       effects.damageMultiplier *= item.damageMultiplier;
@@ -794,6 +1223,61 @@
         effects.damageReduction,
         item.damageReduction,
       );
+      if (item.abnormal) effects.abnormal = item.abnormal;
+      if (item.blockedArtsScale)
+        effects.blockedArtsScale = item.blockedArtsScale;
+      if (item.skillDeployTrue)
+        effects.skillDeployTrue = item.skillDeployTrue;
+      if (item.reflect) effects.reflect = item.reflect;
+      if (item.randomElement) effects.randomElement = item.randomElement;
+      effects.enemyEpRecoverSpeed = Math.max(
+        effects.enemyEpRecoverSpeed,
+        item.enemyEpRecoverSpeed ?? 0,
+      );
+      if (bond.bondId === 'egirShip' && item.egirDevour) {
+        effects.flatAttack += Math.max(
+          0,
+          Number(slot.devourBaseAttack) || 0,
+        );
+        effects.egirDevour = true;
+        effects.egirDamageValue = item.egirDamageValue;
+        effects.egirRespawns = item.egirRespawns;
+      }
+      if (
+        bond.bondId === 'kjeragShip' &&
+        settings.members >= 6
+      ) {
+        const giant = enemyMap.get('enemy_9024_acsgnt');
+        if (giant) {
+          const stackStep =
+            Number(giant.talentBlackboard?.['BondBuff.stackStep']) || 1;
+          const stacks = Math.floor(effectiveLayer / stackStep);
+          const attackScale =
+            Number(giant.talentBlackboard?.['BondBuff.base_atk']) +
+            Number(
+              giant.talentBlackboard?.['BondBuff.attack_per_stack'],
+            ) *
+              stacks;
+          const hpScale =
+            Number(giant.talentBlackboard?.['BondBuff.base_max_hp']) +
+            Number(
+              giant.talentBlackboard?.['BondBuff.max_hp_per_stack'],
+            ) *
+              stacks;
+          effects.snowGiant = {
+            name: giant.name,
+            attack: giant.baseAttack * attackScale,
+            hp: giant.baseHp * hpScale,
+            attackInterval: giant.attackInterval,
+            frozenAttackScale:
+              Number(giant.talentBlackboard?.['FrozenBreak.atk_scale']) ||
+              1,
+            switchInterval:
+              Number(giant.talentBlackboard?.['SwitchMode.interval']) ||
+              0,
+          };
+        }
+      }
       applied.push({ bond, evaluation });
     }
     effects.resistanceShred = Math.min(100, effects.resistanceShred);
@@ -964,7 +1448,36 @@
   function renderChartCovenantControls() {
     const container = document.querySelector('#chart-covenant-controls');
     const bonds = selectedBonds();
-    const focused = focusedCovenant();
+    const occupiedIndexes = new Set(
+      state.slots.flatMap((slot, index) =>
+        findOperator(slot) ? [index] : [],
+      ),
+    );
+    const occupiedLetters = [...occupiedIndexes].map((index) =>
+      String.fromCharCode(65 + index),
+    );
+    const rows = bonds
+      .map((bond) => ({
+        bond,
+        matchedSlots: state.slots.flatMap((slot, index) =>
+          bondAffectsSlot(bond, slot) ? [index] : [],
+        ),
+      }))
+      .filter(({ matchedSlots }) =>
+        matchedSlots.some((index) => occupiedIndexes.has(index)),
+      );
+    const hiddenBonds = bonds.filter(
+      (bond) => !rows.some((row) => row.bond.bondId === bond.bondId),
+    );
+    if (
+      rows.length &&
+      !rows.some(({ bond }) => bond.bondId === state.chartCovenantId)
+    ) {
+      state.chartCovenantId = rows[0].bond.bondId;
+    }
+    const focused =
+      rows.find(({ bond }) => bond.bondId === state.chartCovenantId)?.bond ??
+      null;
     const axisControls = `
       <label class="chart-axis-select">
         <span>扫描变量</span>
@@ -994,21 +1507,26 @@
         `${axisControls}<h3>横轴盟约</h3><p>当前没有可分析的盟约。</p>`;
       return;
     }
+    if (!occupiedIndexes.size) {
+      container.innerHTML =
+        `${axisControls}<h3>横轴盟约 · 多方案</h3><p>当前没有已选择干员，选择干员后显示可分析的盟约。</p>`;
+      return;
+    }
+    if (!rows.length) {
+      container.innerHTML =
+        `${axisControls}<h3>横轴盟约 · 方案 ${occupiedLetters.join('/')}</h3><p>已选干员没有命中下方已选择的盟约。未命中：${hiddenBonds.map((bond) => escapeHtml(bond.name)).join('、') || '无'}。</p>`;
+      return;
+    }
     container.innerHTML = `
       ${axisControls}
-      <h3>横轴盟约</h3>
-      <p>选择一条盟约扫描层数，其他盟约保持当前值不变。</p>
+      <h3>横轴盟约 · 方案 ${occupiedLetters.join('/')}</h3>
+      <p>列出所有已选干员可触发的盟约并集；未命中的已选盟约不会静默消失。</p>
       <div class="chart-covenant-list">
-        ${bonds
-          .map((bond) => {
+        ${rows
+          .map(({ bond, matchedSlots }) => {
             const layer =
               state.covenants.settings[bond.bondId]?.layer ?? 0;
             const isFocused = bond.bondId === focused?.bondId;
-            const matchedSlots = state.slots.flatMap((slot, index) =>
-              bondMatchesOperator(bond, findOperator(slot))
-                ? [index]
-                : [],
-            );
             return `
               <article class="chart-covenant-row ${isFocused ? 'focused' : ''}">
                 <div class="chart-covenant-choice">
@@ -1031,6 +1549,13 @@
           })
           .join('')}
       </div>
+      ${
+        hiddenBonds.length
+          ? `<p class="chart-covenant-note">未显示：${hiddenBonds
+              .map((bond) => escapeHtml(bond.name))
+              .join('、')}（没有已选干员匹配该盟约）</p>`
+          : ''
+      }
       <p class="chart-covenant-note">横轴范围会随所选盟约的当前层数切换；调整滑块会同时更新正式推演。</p>`;
   }
 
@@ -1469,10 +1994,14 @@
   function syncEnemyInputs() {
     document.querySelector('#enemy-def').value = state.enemy.def;
     document.querySelector('#enemy-res').value = state.enemy.res;
+    document.querySelector('#enemy-targetCount').value =
+      state.enemy.targetCount;
     document.querySelector('#def-output').textContent =
       number.format(state.enemy.def);
     document.querySelector('#res-output').textContent =
       `${decimal.format(state.enemy.res)}%`;
+    document.querySelector('#targetCount-output').textContent =
+      number.format(state.enemy.targetCount);
   }
 
   function applyStrongholdEnemy() {
@@ -1503,10 +2032,50 @@
     return `<label>${label}<input type="number" step="${step}" data-field="${field}" value="${escapeHtml(value)}"></label>`;
   }
 
+  function nativeBondTags(operator) {
+    const trait = operator ? traitMap.get(operator.id) : null;
+    if (!trait?.bondIds?.length) return '';
+    const labels = trait.bondIds.map(
+      (bondId) => covenantMap.get(bondId)?.name ?? bondId,
+    );
+    return `
+      <div class="native-bonds" data-role="native-bonds" data-bond-ids="${escapeHtml(trait.bondIds.join(' '))}" title="直接读取本地 CharChessDataDict.BondIds">
+        <span>所属盟约</span>
+        <div>${labels
+          .map((label) => `<b>${escapeHtml(label)}</b>`)
+          .join('')}</div>
+      </div>`;
+  }
+
   function buildSlotCard(slot, index) {
     const color = colorList[index];
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
+    const isEgir = Boolean(
+      operator &&
+        bondMatchesOperator(covenantMap.get('egirShip'), operator),
+    );
+    const isKjerag = Boolean(
+      operator &&
+        bondMatchesOperator(covenantMap.get('kjeragShip'), operator),
+    );
+    const bondSpecificControls = `
+      ${
+        isEgir
+          ? `<label class="slot-equipment-picker">
+              <span>阿戈尔吞噬继承的基础攻击力</span>
+              <input type="number" min="0" step="1" data-field="devourBaseAttack" value="${escapeHtml(slot.devourBaseAttack)}">
+            </label>`
+          : ''
+      }
+      ${
+        isKjerag
+          ? `<label class="trust-toggle">
+              <input type="checkbox" data-field="kjeragCold"${slot.kjeragCold ? ' checked' : ''}>
+              谢拉格按寒冷/冻结倍率计算
+            </label>`
+          : ''
+      }`;
     return `
       <article class="slot-card" data-slot="${index}" style="--slot-color:${color.line};--slot-glow:${color.glow}">
         <div class="slot-top">
@@ -1525,31 +2094,39 @@
           <select data-field="skillName" aria-label="技能">${skillOptions(operator, skill?.name)}</select>
           <select data-field="level" aria-label="技能等级">${levelOptions(skill, slot.level)}</select>
         </div>
-        <select class="module-select" data-field="module" aria-label="模组">${moduleOptions(operator, slot.module)}</select>
-        <label class="slot-equipment-picker">
-          <span>卫戍装备</span>
-          <select class="equipment-select" data-field="equipmentId" aria-label="卫戍装备">${equipmentOptions(slot.equipmentId)}</select>
-        </label>
-        <label class="slot-equipment-picker">
-          <span>变形同构体 + 配套装备</span>
-          <select class="equipment-select" data-field="conversionEquipmentId" aria-label="变形同构体转盟约装备">${conversionEquipmentOptions(slot.conversionEquipmentId)}</select>
-        </label>
-        <div class="mini-row">
-          <label class="trust-toggle"><input type="checkbox" data-field="trust"${slot.trust ? ' checked' : ''}> 满信赖</label>
-          <label>潜能
-            <select data-field="potential">
-              ${[1, 2, 3, 4, 5, 6]
-                .map(
-                  (potential) =>
-                    `<option value="${potential}"${potential === slot.potential ? ' selected' : ''}>${potential}</option>`,
-                )
-                .join('')}
-            </select>
-          </label>
-        </div>
+        ${nativeBondTags(operator)}
+        <details class="slot-more">
+          <summary>模组、装备与状态</summary>
+          <div class="slot-more-body">
+            <select class="module-select" data-field="module" aria-label="模组">${moduleOptions(operator, slot.module)}</select>
+            <label class="slot-equipment-picker">
+              <span>卫戍装备</span>
+              <select class="equipment-select" data-field="equipmentId" aria-label="卫戍装备">${equipmentOptions(slot.equipmentId)}</select>
+            </label>
+            <label class="slot-equipment-picker">
+              <span>变形同构体 + 配套装备</span>
+              <select class="equipment-select" data-field="conversionEquipmentId" aria-label="变形同构体转盟约装备">${conversionEquipmentOptions(slot.conversionEquipmentId)}</select>
+            </label>
+            <div class="mini-row">
+              <label class="trust-toggle"><input type="checkbox" data-field="trust"${slot.trust ? ' checked' : ''}> 满信赖</label>
+              <label class="trust-toggle"><input type="checkbox" data-field="elite"${slot.elite ? ' checked' : ''}> 精锐</label>
+              <label>潜能
+                <select data-field="potential">
+                  ${[1, 2, 3, 4, 5, 6]
+                    .map(
+                      (potential) =>
+                        `<option value="${potential}"${potential === slot.potential ? ' selected' : ''}>${potential}</option>`,
+                    )
+                    .join('')}
+                </select>
+              </label>
+            </div>
+            ${bondSpecificControls}
+          </div>
+        </details>
         <div class="main-result">
           <div>
-            <span>60 帧终极平均 DPS</span>
+            <span data-role="cycle-label">60 帧终极平均 DPS</span>
             <strong data-role="cycle">—</strong>
           </div>
           <div class="result-pair">
@@ -1576,7 +2153,7 @@
           <div class="advanced-grid">
             ${advancedInput('攻击加成 %', 'attackBonus', slot.attackBonus)}
             ${advancedInput('普攻倍率', 'normalMultiplier', slot.normalMultiplier, '0.01')}
-            ${advancedInput('技能攻击倍率', 'activeMultiplier', slot.activeMultiplier, '0.01')}
+            ${advancedInput('技能伤害倍率', 'activeMultiplier', slot.activeMultiplier, '0.01')}
             ${advancedInput('技能攻速', 'aspd', slot.aspd)}
             ${advancedInput('间隔变化（秒）', 'intervalDelta', slot.intervalDelta, '0.01')}
             ${advancedInput('技能持续（秒）', 'duration', slot.duration, '0.01')}
@@ -1723,7 +2300,10 @@
     const activeWindow = Math.max(0, slot.duration);
     const simulationInput = {
       attack:
-        stats.attack + traitEffects.flatAttack + talentEffects.flatAttack,
+        stats.attack +
+        covenantEffects.flatAttack +
+        traitEffects.flatAttack +
+        talentEffects.flatAttack,
       baseInterval: stats.attackInterval,
       damageType: slot.damageType,
       attackBonus:
@@ -1755,6 +2335,7 @@
       normalAspd: globalAspd,
       aspd: slot.aspd,
       intervalDelta: slot.intervalDelta,
+      activeIntervalOverride: slot.activeIntervalOverride ?? 0,
       normalHits: slot.normalHits,
       skillHits: slot.skillHits,
       duration: activeWindow,
@@ -1803,6 +2384,211 @@
       ...simulationInput,
       enemy: combatEnemy,
     });
+    const coreCycleDps = result.cycleDps;
+    if (covenantEffects.snowGiant) {
+      const firstKjeragSlot = state.slots.find((candidate) => {
+        const candidateOperator = findOperator(candidate);
+        return (
+          candidateOperator &&
+          bondMatchesOperator(
+            covenantMap.get('kjeragShip'),
+            candidateOperator,
+          )
+        );
+      });
+      if (firstKjeragSlot === slot) {
+        const giant = covenantEffects.snowGiant;
+        const giantDps = calc.damageAfterMitigation(
+          giant.attack / Math.max(0.05, giant.attackInterval),
+          'arts',
+          combatEnemy,
+        );
+        result.snowGiantDps = giantDps;
+        result.snowGiant = giant;
+        result.cycleDps += giantDps;
+      }
+    }
+    const abnormal = covenantEffects.abnormal;
+    if (abnormal && abnormal.damage > 0 && abnormal.duration > 0) {
+      const interval = Math.max(
+        0.05,
+        Number(result.normalInterval) || stats.attackInterval || 1,
+      );
+      const measuredTime = Math.max(
+        0.05,
+        result.killTime ?? result.horizon,
+      );
+      const attemptsPerSecond = Math.min(
+        1 / Math.max(0.05, abnormal.cooldown || 0.2),
+        (result.normalHits + result.skillHits) / measuredTime,
+      );
+      const immunityByType = {
+        stunned: Boolean(combatEnemy.attributes?.StunImmune),
+        feared: Boolean(combatEnemy.attributes?.FearedImmune),
+        cold: Boolean(
+          combatEnemy.attributes?.ColdImmune ??
+            combatEnemy.attributes?.FrozenImmune,
+        ),
+        palsy: Boolean(combatEnemy.attributes?.PalsyImmune),
+      };
+      const eligibleTypes = (abnormal.types ?? []).filter(
+        (type) => !immunityByType[type],
+      );
+      const abnormalEstimate = calc.estimateSiracusaAbnormalDps({
+        prob: abnormal.prob,
+        duration: abnormal.duration,
+        damage: abnormal.damage,
+        attemptsPerSecond,
+        eligibleTypes: eligibleTypes.length,
+        totalTypes: abnormal.types?.length ?? 4,
+        targets: state.enemy.targetCount,
+        cooldown: abnormal.cooldown,
+      });
+      if (abnormalEstimate.dps > 0) {
+        result.abnormalDps = abnormalEstimate.dps;
+        result.abnormalUptime = abnormalEstimate.uptime;
+        result.abnormalTypes = eligibleTypes;
+        result.cycleDps += abnormalEstimate.dps;
+      }
+      result.abnormalStatusCount = eligibleTypes.length;
+      result.abnormalAttemptRate =
+        abnormalEstimate.attemptsPerSecond;
+    }
+    const enemyRes = Math.min(95, Math.max(0, combatEnemy.res ?? 0));
+    if (covenantEffects.blockedArtsScale > 0) {
+      result.blockedArtsDps =
+        result.effectiveAttack *
+        covenantEffects.blockedArtsScale *
+        (1 - enemyRes / 100);
+      result.cycleDps += result.blockedArtsDps;
+    }
+    if (covenantEffects.skillDeployTrue) {
+      const { scale, window } = covenantEffects.skillDeployTrue;
+      const perSecond =
+        (result.effectiveAttack * scale) /
+        Math.max(0.05, result.normalInterval);
+      const uptime = Math.min(
+        1,
+        window / Math.max(window, simulationInput.horizon),
+      );
+      result.skillDeployTrueDps = perSecond * uptime;
+      result.cycleDps += result.skillDeployTrueDps;
+    }
+    if (covenantEffects.reflect) {
+      result.reflectDps =
+        (covenantEffects.reflect.damage / covenantEffects.reflect.cd) *
+        (1 - enemyRes / 100);
+      result.cycleDps += result.reflectDps;
+    }
+    const epSources = [...(slot.epSources ?? [])];
+    if (
+      !epSources.length &&
+      (slot.epRatio > 0 || slot.epFlatPerSecond > 0) &&
+      slot.epType
+    ) {
+      epSources.push({
+        type: slot.epType,
+        ratio: slot.epRatio,
+        flatPerSecond: slot.epFlatPerSecond,
+        basis: 'damage',
+      });
+    }
+    if (covenantEffects.randomElement) {
+      const { ratio, types } = covenantEffects.randomElement;
+      for (const type of types ?? []) {
+        epSources.push({
+          type,
+          ratio: Math.max(0, Number(ratio) || 0) / types.length,
+          flatPerSecond: 0,
+          basis: 'attack',
+        });
+      }
+    }
+    if (epSources.length) {
+      const epThreshold =
+        strongholdEnemy?.category === 'boss' ? 2000 : 1000;
+      const measuredTime = Math.max(
+        0.05,
+        result.killTime ?? result.horizon,
+      );
+      const attacksPerSecond =
+        (result.normalHits + result.skillHits) / measuredTime;
+      const epAnalysis = calc.estimateElementCycleDps({
+        sources: epSources,
+        dps: result.cycleDps,
+        attack: result.effectiveAttack,
+        attacksPerSecond,
+        resistance: strongholdEnemy?.epResistance ?? 0,
+        damageResistance: strongholdEnemy?.epDamageResistance ?? 0,
+        threshold: epThreshold,
+        recoverySpeed: covenantEffects.enemyEpRecoverSpeed ?? 0,
+        horizon: measuredTime,
+      });
+      if (epAnalysis.cycleDps > 0) {
+        result.epBurstDps = epAnalysis.cycleDps;
+        result.epDetails = epAnalysis.details;
+        result.cycleDps += epAnalysis.cycleDps;
+      }
+      let epBonusDps = 0;
+      for (const bonus of slot.epBurstSources ?? []) {
+        const detail = epAnalysis.details[bonus.type];
+        if (!detail) continue;
+        const perHit =
+          result.effectiveAttack *
+          Math.max(0, Number(bonus.perHitScale) || 0) *
+          attacksPerSecond *
+          detail.uptime;
+        const perSecond =
+          result.effectiveAttack *
+          Math.max(0, Number(bonus.perSecondScale) || 0) *
+          detail.uptime;
+        const perBreak =
+          result.effectiveAttack *
+          Math.max(0, Number(bonus.perBreakScale) || 0) *
+          detail.burstsPerSecond;
+        epBonusDps +=
+          (perHit + perSecond + perBreak) *
+          epAnalysis.damageResistanceScale;
+      }
+      if (epBonusDps > 0) {
+        result.epBurstBonusDps = epBonusDps;
+        result.cycleDps += epBonusDps;
+      }
+    }
+    const groupTargetCount = Math.max(
+      1,
+      Number(state.enemy.targetCount) || 1,
+    );
+    const normalTargets = Math.min(
+      groupTargetCount,
+      Math.max(1, slot.normalTargetCap || 1),
+    );
+    const skillTargets = Math.min(
+      groupTargetCount,
+      Math.max(1, slot.skillTargetCap || 1),
+    );
+    const totalHits = result.normalHits + result.skillHits;
+    const weightedTargets =
+      totalHits > 0
+        ? (result.normalHits * normalTargets +
+            result.skillHits * skillTargets) /
+          totalHits
+        : 1;
+    const singleTargetDps = result.cycleDps;
+    const extraDps = Math.max(0, singleTargetDps - coreCycleDps);
+    const groupedExtraDps =
+      (result.snowGiantDps ?? 0) *
+      (groupTargetCount - 1);
+    result.singleTargetDps = singleTargetDps;
+    result.groupTargetCount = groupTargetCount;
+    result.normalTargets = normalTargets;
+    result.skillTargets = skillTargets;
+    result.normalDps *= normalTargets;
+    result.activeDps *= skillTargets;
+    result.cycleDps =
+      coreCycleDps * weightedTargets +
+      extraDps +
+      groupedExtraDps;
     const equivalentWindow = result.killTime ?? simulationInput.horizon;
     const dummyResult = calc.simulateFrameDps({
       ...simulationInput,
@@ -1839,6 +2625,9 @@
     if (effects.attackBonus) {
       parts.push(`+${decimal.format(effects.attackBonus)}% 攻击`);
     }
+    if (effects.flatAttack) {
+      parts.push(`+${number.format(effects.flatAttack)} 基础攻击`);
+    }
     if (effects.activeAttackBonus) {
       parts.push(`技能期 +${decimal.format(effects.activeAttackBonus)}% 攻击`);
     }
@@ -1862,6 +2651,24 @@
     if (effects.extraDamageMultiplier) {
       parts.push(
         `+${number.format(effects.extraDamageMultiplier * 100)}% 附加伤害`,
+      );
+    }
+    if (effects.randomElement) {
+      parts.push(
+        `${number.format(effects.randomElement.ratio * 100)}% 攻击力随机元素损伤`,
+      );
+    }
+    if (effects.enemyEpRecoverSpeed) {
+      parts.push(
+        `敌人爆条全局恢复 +${number.format(effects.enemyEpRecoverSpeed * 100)}%`,
+      );
+    }
+    if (effects.egirDevour) {
+      parts.push('阿戈尔吞噬继承已计入');
+    }
+    if (effects.snowGiant) {
+      parts.push(
+        `雪山巨人 ${number.format(effects.snowGiant.attack)} 攻击`,
       );
     }
     return parts.length
@@ -2005,7 +2812,8 @@
         : '—';
     document.querySelector('#kill-results').innerHTML = results.length
       ? results.map((item) => {
-        const dps = item.result.cycleDps;
+        const dps =
+          item.result.singleTargetDps ?? item.result.cycleDps;
         const estimatedKill =
           item.result.killTime ??
           (dps > 0 && enemy ? targetHp / dps : Infinity);
@@ -2023,7 +2831,7 @@
             </header>
             <h3>${escapeHtml(item.operator.name)} · ${escapeHtml(item.skill?.name ?? '仅普攻')}</h3>
             <dl>
-              <dt>当前逐帧 DPS</dt><dd>${number.format(dps)}</dd>
+              <dt>当前单体 DPS</dt><dd>${number.format(dps)}</dd>
               <dt>预计击杀时间</dt><dd>${timeLabel}</dd>
               <dt>等效白板血量</dt><dd>${number.format(item.equivalentHp)}</dd>
               <dt>限定时间</dt><dd>${decimal.format(limit)}s</dd>
@@ -2051,6 +2859,22 @@
       ];
     });
     lastResults = results;
+    for (const [index, slot] of state.slots.entries()) {
+      const label = slotsElement.querySelector(
+        `[data-slot="${index}"] [data-role="cycle-label"]`,
+      );
+      if (label) {
+        const item = results.find(
+          (entry) => entry.slotIndex === index,
+        );
+        label.textContent =
+          state.enemy.targetCount > 1
+            ? item
+              ? `群伤总 DPS · 普攻 ${item.result.normalTargets} / 技能 ${item.result.skillTargets} 目标`
+              : '群伤总 DPS'
+            : '60 帧单体平均 DPS';
+      }
+    }
     document.querySelector('#chart-metrics').innerHTML = state.slots
       .map(
         (slot, index) => {
@@ -2067,7 +2891,47 @@
           <article class="chart-metric" style="--metric-color:${colorList[index].line}">
             <span>方案 ${String.fromCharCode(65 + index)} · ${escapeHtml(item.operator.name)}</span>
             <strong>${number.format(item.result.cycleDps)}</strong>
-            <small>${escapeHtml(item.skill?.name ?? '仅普攻')} · 普攻 ${item.result.normalHits} / 技能 ${item.result.skillHits} 次</small>
+            <small>${escapeHtml(item.skill?.name ?? '仅普攻')} · 普攻 ${item.result.normalTargets} / 技能 ${item.result.skillTargets} 目标 · 命中 ${item.result.normalHits} / ${item.result.skillHits} 次${
+              item.result.abnormalDps
+                ? ` · 异常真伤 ${number.format(item.result.abnormalDps)}`
+                : item.result.abnormalStatusCount !== undefined &&
+                    item.result.abnormalStatusCount < 2
+                  ? ' · 可施加异常不足 2 种，异常真伤失效'
+                : ''
+            }${
+              item.result.blockedArtsDps
+                ? ` · 阻挡法伤 ${number.format(item.result.blockedArtsDps)}`
+                : ''
+            }${
+              item.result.skillDeployTrueDps
+                ? ` · 技能真伤 ${number.format(item.result.skillDeployTrueDps)}`
+                : ''
+            }${
+              item.result.reflectDps
+                ? ` · 反伤 ${number.format(item.result.reflectDps)}`
+                : ''
+            }${
+              item.result.epBurstDps
+                ? ` · 元素爆条 ${number.format(item.result.epBurstDps)}`
+                : ''
+            }${
+              item.result.epBurstBonusDps
+                ? ` · 爆条增伤 ${number.format(item.result.epBurstBonusDps)}`
+                : ''
+            }${
+              item.result.snowGiantDps
+                ? ` · 雪山巨人 ${number.format(item.result.snowGiantDps)}`
+                : ''
+            }${
+              item.result.epDetails
+                ? ` · 分项 ${Object.entries(item.result.epDetails)
+                    .map(
+                      ([type, detail]) =>
+                        `${type} ${number.format(detail.damageDps)}`,
+                    )
+                    .join(' / ')}`
+                : ''
+            }</small>
           </article>`;
         },
       )
@@ -2098,7 +2962,7 @@
       card.querySelector('[data-role="damage-type"]').textContent =
         damageTypes[item.slot.damageType] ?? item.slot.damageType;
       card.querySelector('[data-role="covenant-impact"]').textContent =
-        covenantSummary(item.covenant);
+        `当前生效 · ${covenantSummary(item.covenant)}`;
       card.querySelector('[data-role="reference-impact"]').textContent =
         referenceSummary(item.reference);
       card.querySelector('[data-role="trait-impact"]').textContent =
@@ -2222,17 +3086,20 @@
         },
       ];
     });
+    const logAxis = Boolean(state.logAxis);
+    const scaleY = (input) =>
+      logAxis ? Math.log10(Math.max(1, input)) : Math.max(0, input);
     const maxValue = Math.max(
       1,
       ...series.flatMap((item) =>
-        item.values.map((value) => value.result.cycleDps),
+        item.values.map((value) => scaleY(value.result.cycleDps)),
       ),
     );
-    const chartMax = maxValue * 1.1;
+    const chartMax = logAxis ? maxValue * 1.05 : maxValue * 1.1;
     const xToPixel = (index) =>
       margin.left + (plotWidth * index) / (xs.length - 1);
     const yToPixel = (value) =>
-      margin.top + plotHeight * (1 - value / chartMax);
+      margin.top + plotHeight * (1 - scaleY(value) / chartMax);
 
     ctx.clearRect(0, 0, width, height);
     ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
@@ -2246,6 +3113,12 @@
         height / 2,
       );
       document.querySelector('#chart-legend').innerHTML = '';
+      document.querySelector('#tooltip').hidden = true;
+      document.querySelector('#chart-title').textContent = covenantAxis
+        ? '纯逐帧 DPS · 随盟约层数增长'
+        : state.axis === 'res'
+          ? '逐帧平均 DPS · 随法术抗性变化'
+          : '逐帧平均 DPS · 随防御力变化';
       chartModel = {
         xs,
         series,
@@ -2268,8 +3141,9 @@
       ctx.stroke();
       ctx.fillStyle = '#7f91a8';
       ctx.textAlign = 'right';
+      const exponent = chartMax * (1 - line / 5);
       ctx.fillText(
-        number.format(chartMax * (1 - line / 5)),
+        number.format(logAxis ? 10 ** exponent : exponent),
         margin.left - 10,
         y,
       );
@@ -2407,7 +3281,13 @@
       slot.skillHits = 1;
       syncAuto(slot);
       if (operator) focusOperatorCovenant(operator);
-      refreshSlot(index);
+      const previousCard = slotsElement.querySelector(
+        `[data-slot="${index}"]`,
+      );
+      if (previousCard) {
+        previousCard.outerHTML = buildSlotCard(slot, index);
+        refreshSlot(index);
+      }
       renderCovenantSummary();
       renderSelectedCovenants();
       renderChartCovenantControls();
@@ -2469,6 +3349,15 @@
       if (event.target.matches('input[type="number"]')) handle(event);
     });
     slotsElement.addEventListener('change', handle);
+    slotsElement.addEventListener('click', (event) => {
+      if (event.target.closest('input, select, button, textarea, label')) return;
+      const card = event.target.closest('[data-slot]');
+      if (!card) return;
+      const index = Number(card.dataset.slot);
+      if (state.activeSlot === index) return;
+      state.activeSlot = index;
+      renderChartCovenantControls();
+    });
   }
 
   function bindCovenantEvents() {
@@ -2589,6 +3478,15 @@
       clearTimeout(chartControlTimer);
       chartControlTimer = setTimeout(updateResults, 80);
     });
+    const logToggle = document.querySelector('#chart-log-toggle');
+    if (logToggle) {
+      logToggle.addEventListener('click', () => {
+        state.logAxis = !state.logAxis;
+        logToggle.setAttribute('aria-pressed', String(state.logAxis));
+        logToggle.textContent = state.logAxis ? '纵轴线性' : '纵轴对数';
+        drawChart();
+      });
+    }
   }
 
   function bindReferenceEvents() {
@@ -2649,6 +3547,21 @@
       }
       renderCommands();
       updateResults();
+    });
+  }
+
+  function bindRankingEvents() {
+    rankingControls?.addEventListener('click', (event) => {
+      const groupButton = event.target.closest('[data-ranking-group]');
+      const modeButton = event.target.closest('[data-ranking-mode]');
+      if (groupButton) {
+        state.rankingGroup = groupButton.dataset.rankingGroup;
+      } else if (modeButton) {
+        state.rankingMode = modeButton.dataset.rankingMode;
+      } else {
+        return;
+      }
+      renderCovenantRanking();
     });
   }
 
@@ -2794,10 +3707,14 @@
   }
 
   function updateEnemyControl(key, value) {
-    state.enemy[key] = Math.max(0, Number(value) || 0);
+    state.enemy[key] = Math.max(
+      key === 'targetCount' ? 1 : 0,
+      Number(value) || 0,
+    );
     document.querySelector(`#enemy-${key}`).value = state.enemy[key];
     document.querySelector(`#${key}-output`).textContent =
       key === 'res' ? `${state.enemy[key]}%` : number.format(state.enemy[key]);
+    if (key === 'targetCount') renderCovenantRanking();
     updateResults();
   }
 
@@ -2809,6 +3726,7 @@
       useStronghold: true,
       selectedId: defaultEnemyId,
       roomSize: 4,
+      targetCount: 6,
     };
     state.axis = 'covenant';
     document.querySelector('#chart-axis').value = 'covenant';
@@ -2935,7 +3853,10 @@
   }
 
   chart.addEventListener('pointermove', (event) => {
-    if (!chartModel) return;
+    if (!chartModel || !chartModel.series.length) {
+      tooltip.hidden = true;
+      return;
+    }
     const rect = chart.getBoundingClientRect();
     const localX = event.clientX - rect.left;
     const ratio = Math.max(
@@ -2974,6 +3895,11 @@
   document.querySelector('#enemy-res').addEventListener('input', (event) => {
     updateEnemyControl('res', event.target.value);
   });
+  document
+    .querySelector('#enemy-targetCount')
+    .addEventListener('input', (event) => {
+      updateEnemyControl('targetCount', event.target.value);
+    });
   document.querySelector('#reset').addEventListener('click', resetExample);
   document.querySelector('#export').addEventListener('click', exportCsv);
   window.addEventListener('resize', drawChart);
@@ -2981,7 +3907,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-18.18 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-22.9 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
@@ -2999,11 +3925,13 @@
   initEnemyTypeFilter();
   renderStrongholdEnemyOptions();
   syncStrongholdEnemyUI();
+  renderCovenantRanking();
   renderCovenants();
   initReferenceFilters();
   renderReferences();
   bindSlotEvents();
   bindCovenantEvents();
+  bindRankingEvents();
   bindReferenceEvents();
   bindEnemyEvents();
   bindKillEvents();

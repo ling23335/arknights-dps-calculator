@@ -1589,6 +1589,37 @@ input[type="search"]:focus {
   margin-bottom: 8px;
 }
 
+.native-bonds {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 25px;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.native-bonds > span {
+  flex: 0 0 auto;
+  letter-spacing: 0.08em;
+}
+
+.native-bonds > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.native-bonds b {
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--slot-color) 34%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--slot-color) 7%, transparent);
+  color: color-mix(in srgb, var(--slot-color) 82%, white);
+  font-size: 9px;
+  font-weight: 600;
+}
+
 .module-select {
   margin-bottom: 12px;
   color: var(--soft);
@@ -2094,6 +2125,251 @@ tbody tr:last-child td {
   font-weight: 700;
 }
 
+.operator-dock {
+  margin-top: 20px;
+  padding: 16px;
+}
+
+.operator-dock-head,
+.ranking-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.operator-dock-head h2,
+.ranking-head h2 {
+  margin: 0 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  font-weight: 500;
+}
+
+.operator-dock-head p:last-child,
+.ranking-head p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.operator-dock-head > span {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.operator-dock .slots {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.operator-dock .slot-card {
+  display: block;
+  padding: 12px;
+  border-radius: 13px;
+}
+
+.operator-dock .slot-top {
+  margin-bottom: 7px;
+}
+
+.operator-dock .operator-search {
+  height: 29px;
+  margin-bottom: 5px;
+}
+
+.operator-dock .operator-select {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.operator-dock .skill-line {
+  grid-template-columns: minmax(0, 1fr) 62px;
+  margin-bottom: 6px;
+}
+
+.operator-dock .slot-more {
+  margin: 5px 0 8px;
+}
+
+.operator-dock .main-result {
+  padding: 9px 0;
+}
+
+.operator-dock .main-result strong {
+  font-size: 21px;
+}
+
+.operator-dock .slot-card > .description,
+.operator-dock .simulation-detail,
+.operator-dock .skill-source,
+.operator-dock .advanced,
+.operator-dock [data-role="reference-impact"],
+.operator-dock [data-role="conversion-impact"],
+.operator-dock [data-role="trait-impact"],
+.operator-dock [data-role="talent-impact"] {
+  display: none;
+}
+
+.operator-dock [data-role="covenant-impact"] {
+  margin-top: 6px;
+}
+
+.slot-more {
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.slot-more summary {
+  padding: 7px 0;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.slot-more-body {
+  padding: 0 0 9px;
+}
+
+.ranking-module {
+  padding: 20px 22px;
+}
+
+.ranking-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ranking-controls button {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(10, 16, 24, 0.62);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.ranking-controls button[aria-pressed="true"] {
+  border-color: rgba(114, 221, 197, 0.55);
+  background: rgba(114, 221, 197, 0.1);
+  color: var(--teal);
+}
+
+.ranking-board {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 104px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgba(11, 17, 25, 0.52);
+}
+
+.ranking-row.rank-1 {
+  border-color: rgba(255, 177, 104, 0.48);
+  background:
+    linear-gradient(90deg, rgba(255, 177, 104, 0.1), transparent 52%),
+    rgba(11, 17, 25, 0.58);
+}
+
+.ranking-row.rank-2 {
+  border-color: rgba(120, 170, 255, 0.35);
+}
+
+.ranking-row.rank-3 {
+  border-color: rgba(114, 221, 197, 0.3);
+}
+
+.ranking-number {
+  color: var(--orange);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  text-align: center;
+}
+
+.ranking-name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ranking-name h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ranking-name span {
+  color: var(--soft);
+  font-size: 10px;
+}
+
+.ranking-copy p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.ranking-secondary {
+  text-align: right;
+}
+
+.ranking-secondary b,
+.ranking-secondary small {
+  display: block;
+}
+
+.ranking-secondary b {
+  color: var(--teal);
+  font-size: 11px;
+}
+
+.ranking-secondary small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.ranking-utility {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.ranking-utility summary {
+  cursor: pointer;
+}
+
+.ranking-utility-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.ranking-utility-list span {
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  line-height: 1.45;
+}
+
+.ranking-utility-list b {
+  display: block;
+  color: var(--soft);
+}
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -2112,6 +2388,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .operator-dock .slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .covenant-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -2128,6 +2408,10 @@ footer {
     display: grid;
     grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
     column-gap: 18px;
+  }
+
+  .operator-dock .slot-card {
+    display: block;
   }
 
   .slot-top,
@@ -2179,6 +2463,20 @@ footer {
     align-items: flex-start;
   }
 
+  .operator-dock-head,
+  .ranking-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ranking-controls {
+    justify-content: flex-start;
+  }
+
+  .operator-dock .slots {
+    grid-template-columns: 1fr;
+  }
+
   .data-stamp {
     min-width: 135px;
   }
@@ -2228,6 +2526,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .ranking-utility-list {
+    grid-template-columns: 1fr;
+  }
+
   .slot-card {
     display: block;
   }
@@ -2259,6 +2561,28 @@ footer {
   .data-stamp {
     width: 100%;
     margin-top: 18px;
+    text-align: left;
+  }
+
+  .operator-dock,
+  .ranking-module {
+    padding: 14px;
+  }
+
+  .operator-dock-head > span {
+    display: none;
+  }
+
+  .operator-dock .skill-line {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .ranking-row {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .ranking-secondary {
+    grid-column: 2;
     text-align: left;
   }
 
