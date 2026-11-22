@@ -16,6 +16,7 @@ const {
   estimateSiracusaAbnormalDps,
   classifySkillOutput,
   mergeTalentEffects,
+  summarizeDamageMetrics,
   matchOperatorName,
   evaluateCovenant,
   evaluateAutoChessTrait,
@@ -27,6 +28,66 @@ test('physical damage subtracts defense', () => {
     damageAfterMitigation(1000, 'physical', { def: 320, res: 50 }),
     680,
   );
+});
+
+test('damage metrics convert simulated hit totals into per-hit DPH', () => {
+  assert.equal(typeof summarizeDamageMetrics, 'function');
+  const metrics = summarizeDamageMetrics({
+    normalDph: 1200,
+    skillDph: 3000,
+    cycleDps: 1000,
+    horizon: 120,
+    killTime: null,
+  });
+
+  assert.equal(metrics.normalDph, 1200);
+  assert.equal(metrics.skillDph, 3000);
+});
+
+test('damage metrics report total and elemental damage over the measured window', () => {
+  assert.equal(typeof summarizeDamageMetrics, 'function');
+  const metrics = summarizeDamageMetrics({
+    normalHit: 0,
+    activeHit: 0,
+    cycleDps: 500,
+    epBurstDps: 20,
+    epBurstBonusDps: 5,
+    horizon: 120,
+    killTime: 7.5,
+  });
+
+  assert.equal(metrics.windowSeconds, 7.5);
+  assert.equal(metrics.totalDamage, 3750);
+  assert.equal(metrics.elementDamage, 187.5);
+});
+
+test('frame simulation separates per-hit damage from multi-hit attack totals', () => {
+  const result = simulateFrameDps({
+    attack: 1000,
+    baseInterval: 1,
+    damageType: 'true',
+    enemy: { def: 0, res: 0, hp: Infinity },
+    normalHits: 2,
+    skillHits: 3,
+    activeMultiplier: 2,
+    duration: 10,
+    cooldown: 0,
+    horizon: 10,
+    sp: {
+      mode: 'natural',
+      cost: 1,
+      initial: 1,
+      perSecond: 1,
+      maxCharges: 1,
+      blockFrames: 0,
+      frameRate: 30,
+    },
+  });
+
+  assert.equal(result.normalDph, 1000);
+  assert.equal(result.skillDph, 2000);
+  assert.equal(result.normalHit, 2000);
+  assert.equal(result.activeHit, 6000);
 });
 
 test('element burst uses the local enemy values, break threshold, and cooldown', () => {

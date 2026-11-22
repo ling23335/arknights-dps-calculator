@@ -1706,6 +1706,26 @@ input[type="search"]:focus {
   line-height: 1.5;
 }
 
+.damage-summary {
+  margin: 7px 0 0;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--slot-color) 20%, var(--line-soft));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--slot-color) 5%, transparent);
+  color: #c5d4df;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+
+.metric-window {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+}
+
 .description {
   display: -webkit-box;
   overflow: hidden;

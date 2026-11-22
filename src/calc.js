@@ -32,6 +32,31 @@ function calculateCycleDps({
   return (normalDps * readyTime + activeDps * activeTime) / cycleLength;
 }
 
+function summarizeDamageMetrics(result = {}) {
+  const windowSeconds = Number.isFinite(result.killTime)
+    ? Math.max(0, result.killTime)
+    : Math.max(0, Number(result.horizon) || 0);
+  const normalHits = Math.max(1, Number(result.normalHits) || 1);
+  const skillHits = Math.max(1, Number(result.skillHits) || 1);
+  const cycleDps = Math.max(
+    0,
+    Number(result.cycleDps ?? result.dps) || 0,
+  );
+  const elementDps =
+    Math.max(0, Number(result.epBurstDps) || 0) +
+    Math.max(0, Number(result.epBurstBonusDps) || 0);
+
+  return {
+    windowSeconds,
+    normalDph: Math.max(0, Number(result.normalDph) || 0),
+    skillDph: Math.max(0, Number(result.skillDph) || 0),
+    totalDamage: cycleDps * windowSeconds,
+    normalDamage: Math.max(0, Number(result.normalDamage) || 0),
+    skillDamage: Math.max(0, Number(result.activeDamage) || 0),
+    elementDamage: elementDps * windowSeconds,
+  };
+}
+
 function resolveOperatorStats(
   operator,
   { trust = true, potential = 1, module = '' } = {},
@@ -753,18 +778,18 @@ function calculateDpsModel({
     def: Math.max(0, (enemy.def ?? 0) * defenseScale - defenseIgnore),
     res: Math.max(0, (enemy.res ?? 0) * resistanceScale - resistanceIgnore),
   };
-  const normalHit =
-    damageAfterMitigation(
-      effectiveAttack * normalMultiplier,
-      damageType,
-      mitigatedEnemy,
-    ) * Math.max(1, normalHits);
-  const activeHit =
-    damageAfterMitigation(
-      effectiveAttack * activeMultiplier,
-      damageType,
-      mitigatedEnemy,
-    ) * Math.max(1, skillHits);
+  const normalDph = damageAfterMitigation(
+    effectiveAttack * normalMultiplier,
+    damageType,
+    mitigatedEnemy,
+  );
+  const skillDph = damageAfterMitigation(
+    effectiveAttack * activeMultiplier,
+    damageType,
+    mitigatedEnemy,
+  );
+  const normalHit = normalDph * Math.max(1, normalHits);
+  const activeHit = skillDph * Math.max(1, skillHits);
   const normalDps = normalHit / normalInterval;
   const activeDps = activeHit / activeInterval;
   const cycleDps = calculateCycleDps({
@@ -778,6 +803,8 @@ function calculateDpsModel({
     effectiveAttack,
     normalInterval,
     activeInterval,
+    normalDph,
+    skillDph,
     normalHit,
     activeHit,
     normalDps,
@@ -836,22 +863,20 @@ function simulateFrameDps({
     def: Math.max(0, (enemy.def ?? 0) * defenseScale - defenseIgnore),
     res: Math.max(0, (enemy.res ?? 0) * resistanceScale - resistanceIgnore),
   };
-  const normalHit =
-    (damageAfterMitigation(
+  const normalDph =
+    damageAfterMitigation(
       effectiveAttack * normalMultiplier,
       damageType,
       mitigatedEnemy,
-    ) +
-      Math.max(0, flatHitDamage)) *
-    Math.max(1, normalHits);
-  const activeHit =
-    (damageAfterMitigation(
+    ) + Math.max(0, flatHitDamage);
+  const skillDph =
+    damageAfterMitigation(
       effectiveAttack * activeMultiplier,
       damageType,
       mitigatedEnemy,
-    ) +
-      Math.max(0, flatHitDamage)) *
-    Math.max(1, skillHits);
+    ) + Math.max(0, flatHitDamage);
+  const normalHit = normalDph * Math.max(1, normalHits);
+  const activeHit = skillDph * Math.max(1, skillHits);
 
   if (sp?.maxCharges > 0) {
     const cost = Math.max(epsilon, Number(sp.cost) || 1);
@@ -953,6 +978,8 @@ function simulateFrameDps({
       effectiveAttack,
       normalInterval,
       activeInterval: normalInterval,
+      normalDph,
+      skillDph,
       normalHit,
       activeHit,
       normalDps: normalTime > 0 ? normalDamage / normalTime : 0,
@@ -1065,6 +1092,8 @@ function simulateFrameDps({
     effectiveAttack,
     normalInterval,
     activeInterval,
+    normalDph,
+    skillDph,
     normalHit,
     activeHit,
     normalDps: normalTime > 0 ? normalDamage / normalTime : 0,
@@ -1558,6 +1587,7 @@ function evaluateCovenant(bond, layer = 0, memberCount = 0, options = {}) {
 globalThis.ArkCalc = {
   damageAfterMitigation,
   calculateCycleDps,
+  summarizeDamageMetrics,
   resolveOperatorStats,
   estimateSkillHints,
   inferDamageType,

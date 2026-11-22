@@ -2136,6 +2136,7 @@
           </div>
         </div>
         <p class="simulation-detail" data-role="simulation-detail"></p>
+        <p class="damage-summary" data-role="damage-summary"></p>
         <p class="covenant-impact" data-role="covenant-impact"></p>
         <p class="covenant-impact" data-role="reference-impact"></p>
         <p class="covenant-impact" data-role="conversion-impact"></p>
@@ -2599,6 +2600,7 @@
       Number.isFinite(enemyHp) && result.totalDamage > 0
         ? enemyHp * (dummyResult.totalDamage / result.totalDamage)
         : dummyResult.totalDamage;
+    result.damageSummary = calc.summarizeDamageMetrics(result);
     return {
       slot,
       operator,
@@ -2832,6 +2834,8 @@
             <h3>${escapeHtml(item.operator.name)} · ${escapeHtml(item.skill?.name ?? '仅普攻')}</h3>
             <dl>
               <dt>当前单体 DPS</dt><dd>${number.format(dps)}</dd>
+              <dt>DPH（普 / 技）</dt><dd>${number.format(item.result.damageSummary.normalDph)} / ${number.format(item.result.damageSummary.skillDph)}</dd>
+              <dt>单体窗口总伤</dt><dd>${number.format(item.result.singleTargetDps * item.result.damageSummary.windowSeconds)}</dd>
               <dt>预计击杀时间</dt><dd>${timeLabel}</dd>
               <dt>等效白板血量</dt><dd>${number.format(item.equivalentHp)}</dd>
               <dt>限定时间</dt><dd>${decimal.format(limit)}s</dd>
@@ -2959,6 +2963,17 @@
             ? ` · ${item.slot.charges} 充能 · 阻回 ${decimal.format((item.result.blockSeconds ?? 0) * 30)} 帧`
             : ''
         }${item.result.spPerSecond ? ` · 回技 ${decimal.format(item.result.spPerSecond)}/秒` : ''}`;
+      const damageSummary = item.result.damageSummary;
+      const damageWindow =
+        item.result.killTime === null
+          ? `${decimal.format(damageSummary.windowSeconds)}s 模拟窗口`
+          : `${decimal.format(damageSummary.windowSeconds)}s 击杀窗口`;
+      card.querySelector('[data-role="damage-summary"]').textContent =
+        `当前敌人 DPH · 普攻 ${number.format(damageSummary.normalDph)} / 技能 ${number.format(damageSummary.skillDph)} · ${damageWindow}总伤 ${number.format(damageSummary.totalDamage)}${
+          damageSummary.elementDamage > 0
+            ? ` · 其中元素爆条 ${number.format(damageSummary.elementDamage)}`
+            : ''
+        }`;
       card.querySelector('[data-role="damage-type"]').textContent =
         damageTypes[item.slot.damageType] ?? item.slot.damageType;
       card.querySelector('[data-role="covenant-impact"]').textContent =
@@ -2992,9 +3007,12 @@
               </span>
             </td>
             <td>${number.format(item.result.effectiveAttack)}</td>
+            <td>${number.format(item.result.damageSummary.normalDph)}</td>
+            <td>${number.format(item.result.damageSummary.skillDph)}</td>
             <td>${number.format(item.result.normalDps)}</td>
             <td>${number.format(item.result.activeDps)}</td>
             <td class="cycle-cell">${number.format(item.result.cycleDps)}</td>
+            <td>${number.format(item.result.damageSummary.totalDamage)}<small class="metric-window">${decimal.format(item.result.damageSummary.windowSeconds)}s</small></td>
             <td>${item.result.killTime === null ? '&gt; 120s' : `${decimal.format(item.result.killTime)}s`}</td>
             <td>${number.format(item.equivalentHp)}</td>
             <td>${decimal.format(item.result.normalInterval)}s</td>
@@ -3753,9 +3771,14 @@
         '技能',
         '等级',
         '攻击力',
+        '普攻DPH',
+        '技能DPH',
         '普攻DPS',
         '技能DPS',
         '周期DPS',
+        '模拟窗口秒',
+        '模拟总伤',
+        '元素爆条总伤',
         '击杀时间',
         '等效白板血量',
         '模拟帧数',
@@ -3791,14 +3814,22 @@
       ...state.slots.flatMap((slot) => {
         const item = calculateSlot(slot);
         if (!item) return [];
+        const equipmentBase =
+          item.equipmentBase ??
+          calculateSlot({ ...slot, conversionEquipmentId: '' });
         return [[
           item.operator.name,
           item.skill?.name ?? '',
           slot.level,
           item.result.effectiveAttack,
+          item.result.damageSummary.normalDph,
+          item.result.damageSummary.skillDph,
           item.result.normalDps,
           item.result.activeDps,
           item.result.cycleDps,
+          item.result.damageSummary.windowSeconds,
+          item.result.damageSummary.totalDamage,
+          item.result.damageSummary.elementDamage,
           item.result.killTime ?? '',
           item.equivalentHp,
           item.result.ticks,
@@ -3813,7 +3844,7 @@
           state.enemy.roomSize,
           strongholdTargetHp(enemyMap.get(state.enemy.selectedId)),
           item.covenant.applied.map((entry) => entry.bond.name).join('、'),
-          item.equipmentBase.result.cycleDps,
+          equipmentBase.result.cycleDps,
           item.result.cycleDps,
           equipmentMap.get(item.slot.conversionEquipmentId)?.bondName ?? '',
           item.reference.equipments?.map((entry) => entry.name).join(' + ') ?? '',
@@ -3880,8 +3911,11 @@
           : `${number.format(value)} 防御`;
     tooltip.innerHTML = `<b>${xLabel}</b><br>${chartModel.series
       .map(
-        (series) =>
-          `${escapeHtml(series.name)} ${number.format(series.values[index].result.cycleDps)}`,
+        (series) => {
+          const result = series.values[index].result;
+          const metrics = result.damageSummary;
+          return `${escapeHtml(series.name)} ${number.format(result.cycleDps)} DPS<br><small>DPH 普 ${number.format(metrics.normalDph)} / 技 ${number.format(metrics.skillDph)} · 总伤 ${number.format(metrics.totalDamage)}</small>`;
+        },
       )
       .join('<br>')}`;
   });
@@ -3907,7 +3941,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-22.9 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-22.10 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
