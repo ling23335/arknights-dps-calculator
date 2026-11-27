@@ -57,6 +57,71 @@ function summarizeDamageMetrics(result = {}) {
   };
 }
 
+function resolveAutochessEnemyStats(enemy, mode, options = {}) {
+  const factor = Math.max(0, Number(mode?.factor) || 1);
+  const attackFactor = Math.max(0, Number(mode?.attackFactor) || 1);
+  const defenseFactor = Math.max(0, Number(mode?.defenseFactor) || 1);
+  const resistanceFactor = Math.max(0, Number(mode?.resistanceFactor) || 1);
+  const enemyEffect = options.enemyEffect ?? {};
+  const hpEffectFactor = Math.max(
+    0,
+    Number(enemyEffect.hpMultiplier) || 1,
+  );
+  const attackEffectFactor = Math.max(
+    0,
+    Number(enemyEffect.attackMultiplier) || 1,
+  );
+  const bossHp = Number(options.bossHpByMode?.[enemy?.bossId]);
+  const baseHp = Math.max(0, Number(enemy?.baseHp) || 0);
+  const refractionHpBonus = Math.max(
+    0,
+    Number(enemy?.refraction?.hpBonus) || 0,
+  );
+  const refractionResistance = Math.max(
+    0,
+    Number(enemy?.refraction?.magicResistanceBonus) || 0,
+  );
+  const hp =
+    enemy?.category === 'boss' && Number.isFinite(bossHp)
+      ? bossHp
+      : baseHp * factor;
+
+  return {
+    hp: hp * (1 + refractionHpBonus) * hpEffectFactor,
+    attack:
+      Math.max(0, Number(enemy?.baseAttack) || 0) *
+      attackFactor *
+      factor *
+      attackEffectFactor,
+    defense:
+      Math.max(0, Number(enemy?.baseDefense) || 0) * defenseFactor * factor,
+    resistance: Math.min(
+      100,
+      Math.max(0, Number(enemy?.baseResistance) || 0) * resistanceFactor +
+        refractionResistance,
+    ),
+    attackSpeed: Math.max(
+      0,
+      (Number(enemy?.attackSpeed) || 0) +
+        (Number(enemyEffect.attackSpeedAdd) || 0),
+    ),
+    moveSpeed: Math.max(
+      0,
+      (Number(enemy?.moveSpeed) || 0) *
+        (1 + (Number(enemyEffect.moveSpeedAdd) || 0)),
+    ),
+  };
+}
+
+function summarizeEnemyWaveHp(actions = [], enemyHpById = {}, factor = 1) {
+  const multiplier = Math.max(0, Number(factor) || 1);
+  return actions.reduce((total, action) => {
+    const hp = Math.max(0, Number(enemyHpById[action.enemyId]) || 0);
+    const count = Math.max(0, Number(action.count) || 0);
+    return total + hp * count * multiplier;
+  }, 0);
+}
+
 function resolveOperatorStats(
   operator,
   { trust = true, potential = 1, module = '' } = {},
@@ -1588,6 +1653,8 @@ globalThis.ArkCalc = {
   damageAfterMitigation,
   calculateCycleDps,
   summarizeDamageMetrics,
+  resolveAutochessEnemyStats,
+  summarizeEnemyWaveHp,
   resolveOperatorStats,
   estimateSkillHints,
   inferDamageType,

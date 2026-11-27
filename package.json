@@ -8,11 +8,13 @@
     "extract:reference": "node scripts/reference-data.mjs",
     "extract:ultimate": "node scripts/ultimate-enemies.mjs",
     "extract:traits": "node scripts/autochess-traits.mjs",
+    "extract:rounds": "python scripts/extract-autochess-rounds.py",
     "extract:operators": "node scripts/extract-autochess-operators.mjs",
     "extract:modules": "node scripts/extract-autochess-modules.mjs",
     "audit:roster": "node scripts/audit-roster.mjs",
     "audit:skills": "node scripts/audit-skill-data.mjs",
     "audit:raw-bonds": "node scripts/audit-raw-autochess-bonds.mjs",
+    "audit:browser": "node scripts/browser-enemy-audit.mjs",
     "serve": "python -m http.server 4173 --bind 0.0.0.0"
   },
   "devDependencies": {

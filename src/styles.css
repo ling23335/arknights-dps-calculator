@@ -903,6 +903,53 @@ input[type="search"]:focus {
   font-size: 10px;
 }
 
+.enemy-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.enemy-mode-grid label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.enemy-mode-grid label:last-child {
+  grid-column: 1 / -1;
+}
+
+.enemy-wave-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 8px 9px;
+  border: 1px solid rgba(255, 177, 104, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 177, 104, 0.045);
+}
+
+.enemy-wave-summary span {
+  color: var(--soft);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.enemy-wave-summary b {
+  color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-wave-summary p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
 .stronghold-enemy-panel.is-disabled {
   display: none;
 }
@@ -1203,6 +1250,16 @@ input[type="search"]:focus {
   border-color: rgba(255, 177, 104, 0.55);
   background: rgba(255, 177, 104, 0.08);
   box-shadow: inset 3px 0 var(--orange);
+}
+
+.covenant-card.mode-unavailable {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: saturate(0.45);
+}
+
+.covenant-card.mode-unavailable .covenant-card-top i {
+  color: #ff9f86;
 }
 
 .covenant-card-top {

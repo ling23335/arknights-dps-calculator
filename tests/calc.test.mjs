@@ -17,6 +17,8 @@ const {
   classifySkillOutput,
   mergeTalentEffects,
   summarizeDamageMetrics,
+  summarizeEnemyWaveHp,
+  resolveAutochessEnemyStats,
   matchOperatorName,
   evaluateCovenant,
   evaluateAutoChessTrait,
@@ -59,6 +61,152 @@ test('damage metrics report total and elemental damage over the measured window'
   assert.equal(metrics.windowSeconds, 7.5);
   assert.equal(metrics.totalDamage, 3750);
   assert.equal(metrics.elementDamage, 187.5);
+});
+
+test('autochess regular enemies apply the mode factor to base stats', () => {
+  assert.equal(typeof resolveAutochessEnemyStats, 'function');
+  const result = resolveAutochessEnemyStats(
+    {
+      category: 'regular',
+      baseHp: 1000,
+      baseAttack: 100,
+      baseDefense: 50,
+      baseResistance: 20,
+    },
+    {
+      factor: 1.5,
+      attackFactor: 5,
+      defenseFactor: 3,
+      resistanceFactor: 3,
+    },
+  );
+
+  assert.equal(result.hp, 1500);
+  assert.equal(result.attack, 750);
+  assert.equal(result.defense, 225);
+  assert.equal(result.resistance, 60);
+});
+
+test('autochess boss blood table overrides base hp without mode multiplication', () => {
+  assert.equal(typeof resolveAutochessEnemyStats, 'function');
+  const result = resolveAutochessEnemyStats(
+    {
+      category: 'boss',
+      bossId: 'boss_1',
+      baseHp: 600000,
+      baseAttack: 650,
+      baseDefense: 1000,
+      baseResistance: 25,
+    },
+    {
+      factor: 1.5,
+      attackFactor: 5,
+      defenseFactor: 3,
+      resistanceFactor: 3,
+    },
+    {
+      bossHpByMode: {
+        boss_1: 3940000,
+      },
+    },
+  );
+
+  assert.equal(result.hp, 3940000);
+  assert.equal(result.attack, 4875);
+  assert.equal(result.defense, 4500);
+  assert.equal(result.resistance, 75);
+});
+
+test('enemy wave hp multiplies spawn counts, base hp and mode factor', () => {
+  assert.equal(typeof summarizeEnemyWaveHp, 'function');
+  const total = summarizeEnemyWaveHp(
+    [
+      { enemyId: 'enemy_a', count: 2 },
+      { enemyId: 'enemy_b', count: 3 },
+    ],
+    {
+      enemy_a: 1000,
+      enemy_b: 500,
+    },
+    1.2,
+  );
+
+  assert.equal(total, 4200);
+});
+
+test('optional enemy effects apply only to resolved enemy stats', () => {
+  const baseEnemy = {
+    category: 'regular',
+    baseHp: 1000,
+    baseAttack: 100,
+    baseDefense: 50,
+    baseResistance: 20,
+    attackSpeed: 100,
+    moveSpeed: 1,
+  };
+  const mode = {
+    factor: 1.5,
+    attackFactor: 5,
+    defenseFactor: 3,
+    resistanceFactor: 3,
+  };
+  const result = resolveAutochessEnemyStats(baseEnemy, mode, {
+    enemyEffect: {
+      hpMultiplier: 1.2,
+      attackMultiplier: 1.1,
+      attackSpeedAdd: 10,
+      moveSpeedAdd: 0.3,
+    },
+  });
+
+  assert.equal(result.hp, 1800);
+  assert.ok(Math.abs(result.attack - 825) < 1e-9);
+  assert.equal(result.attackSpeed, 110);
+  assert.equal(result.moveSpeed, 1.3);
+});
+
+test('local autochess round snapshot covers all multiplayer rounds and boss tables', () => {
+  const snapshotPath = new URL(
+    '../data/autochess-rounds.json',
+    import.meta.url,
+  );
+  assert.equal(fs.existsSync(snapshotPath), true);
+  const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+  const modes = snapshot.modes;
+
+  assert.deepEqual(Object.keys(modes), [
+    'mode_multi_funny',
+    'mode_multi_normal',
+    'mode_multi_hard',
+    'mode_multi_abyss',
+  ]);
+  assert.equal(
+    modes.mode_multi_funny.rounds.find((round) => round.round === 13)
+      .normalHpMin,
+    614900,
+  );
+  assert.equal(
+    modes.mode_multi_abyss.rounds.find((round) => round.round === 13)
+      .normalHpMin,
+    922350,
+  );
+  assert.equal(
+    modes.mode_multi_abyss.rounds.find((round) => round.round === 14)
+      .variants.length,
+    10,
+  );
+  assert.equal(
+    modes.mode_multi_abyss.rounds.find((round) => round.round === 15)
+      .variants.length,
+    6,
+  );
+  assert.equal(
+    snapshot.bossHpByMode.boss_15.mode_multi_abyss,
+    7885000,
+  );
+  assert.equal(snapshot.enemyEffects.length, 40);
+  assert.equal(snapshot.randomEnemyAttributes.count, 456);
+  assert.deepEqual(snapshot.randomEnemyAttributes.levelValues, [0]);
 });
 
 test('frame simulation separates per-hit damage from multi-hit attack totals', () => {

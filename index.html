@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="app-build" content="2026-11-22.10">
+  <meta name="app-build" content="2026-11-22.11">
   <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
-  <link rel="stylesheet" href="src/styles.css?v=2026-11-22.10">
+  <link rel="stylesheet" href="src/styles.css?v=2026-11-22.11">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -66,13 +66,32 @@
 
           <label class="stronghold-enemy-toggle">
             <span>
-              <b>使用终极模拟敌人</b>
-              <small>已应用终极模式、攻击、防御与法抗倍率</small>
+              <b>使用卫戍协议敌人</b>
+              <small>按所选难度、回合和敌方效果实时计算</small>
             </span>
             <input id="stronghold-enemy-enabled" type="checkbox" checked>
           </label>
           <div id="stronghold-enemy-panel" class="stronghold-enemy-panel">
+            <div class="enemy-mode-grid">
+              <label>
+                <span>模拟难度</span>
+                <select id="stronghold-mode" aria-label="卫戍协议模拟难度"></select>
+              </label>
+              <label>
+                <span>回合</span>
+                <select id="stronghold-round" aria-label="卫戍协议回合"></select>
+              </label>
+              <label>
+                <span>波次 / 领袖分支</span>
+                <select id="stronghold-round-variant" aria-label="卫戍协议波次或领袖分支"></select>
+              </label>
+            </div>
+            <div id="stronghold-wave-summary" class="enemy-wave-summary"></div>
             <input id="stronghold-enemy-search" type="search" placeholder="搜索卫戍敌人">
+            <label class="enemy-room-control">
+              <span>敌方增益 / 削弱效果</span>
+              <select id="stronghold-enemy-effect" aria-label="卫戍敌方效果"></select>
+            </label>
             <label class="enemy-room-control">
               <span>房间人数（共享领袖总血倍率）</span>
               <select id="stronghold-room-size" aria-label="卫戍房间人数">
@@ -82,7 +101,7 @@
                 <option value="4" selected>4 人 · 4×</option>
               </select>
             </label>
-            <p class="enemy-mode-note">本地终极关卡只登记一个共享领袖实例。攻防、法抗与普通敌人的单体生命不随人数改变；共享领袖总生命按 2×/3×/4× 显示。</p>
+            <p class="enemy-mode-note">普通敌人生命 = 本地 EnemyDatabase 基础生命 × 难度倍率；领袖生命直接读取所选难度 BloodDataDict。随机替换表只在运行时决定具体替换目标，不能把替换概率直接乘到基础波次血量。</p>
             <select id="stronghold-enemy-type" aria-label="卫戍敌人类型">
               <option value="all">全部敌人类型</option>
             </select>
@@ -136,7 +155,7 @@
               <p><b>DPH</b> 单次命中经过当前敌人防御、法抗和穿透后的实际伤害；多段技能按平均每段显示。</p>
               <p><b>总伤</b> 当前模拟窗口内击杀前或 120 秒内的累计伤害；元素爆条单独标出。</p>
               <p><b>充能</b> 可充能技能逐个消耗存量；点燃每次消耗后进入 36 帧与当前攻击间隔的较小值作为阻回时间。</p>
-              <p><b>终极敌人</b> 应用终极模拟模式倍率；领袖生命取本地游戏终极血量表，不使用基础敌人面板。</p>
+              <p><b>卫戍敌人</b> 普通敌人使用本地基础属性乘所选难度倍率；领袖生命直接读取该难度 BloodDataDict。波次总血由实际生成数量与敌人构成求和。</p>
               <p><b>盟约</b> 数据来自本地热更新；干员只自动应用其实际所属且达到激活人数的盟约。</p>
               <p>召唤物、随机目标、多段命中和特殊状态无法由文本稳定推断，使用“高级参数”手动覆盖。</p>
             </div>
@@ -366,7 +385,7 @@
             <div>
               <p class="eyebrow">TARGET KILL CALCULATOR</p>
               <h2>敌人击杀计算器</h2>
-              <p>使用当前终极模拟敌人的生命值与防御参数，计算三套方案的击杀时间，以及限定时间内所需的最低 DPS。</p>
+              <p>使用当前所选难度、敌方效果和房间人数下的生命与防御参数，计算三套方案的击杀时间，以及限定时间内所需的最低 DPS。</p>
             </div>
             <div class="module-tools">
               <button type="button" data-module-collapse>收起</button>
@@ -390,7 +409,7 @@
                   <span>限定时间内最低 DPS</span>
                   <strong id="kill-required-dps">—</strong>
                 </div>
-                <small>按“终极敌人生命值 ÷ 限定秒数”计算。等效白板血量表示该方案在相同击杀时间下，能打掉多少无防御、无法抗、无特殊机制的木桩生命。</small>
+                <small>按“当前目标生命值 ÷ 限定秒数”计算。等效白板血量表示该方案在相同击杀时间下，能打掉多少无防御、无法抗、无特殊机制的木桩生命。</small>
               </article>
             </div>
             <div id="kill-results" class="kill-results"></div>
@@ -406,14 +425,15 @@
   </div>
 
   <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
-  <script src="data/operators-autochess.js?v=2026-11-22.10"></script>
-  <script src="data/covenants.js?v=2026-11-22.10"></script>
-  <script src="data/enemies.js?v=2026-11-22.10"></script>
-  <script src="data/equipment.js?v=2026-11-22.10"></script>
-  <script src="data/commands.js?v=2026-11-22.10"></script>
-  <script src="data/autochess-traits.js?v=2026-11-22.10"></script>
-  <script src="data/autochess-modules.js?v=2026-11-22.10"></script>
-  <script src="src/calc.js?v=2026-11-22.10"></script>
-  <script src="src/app.js?v=2026-11-22.10"></script>
+  <script src="data/operators-autochess.js?v=2026-11-22.11"></script>
+  <script src="data/covenants.js?v=2026-11-22.11"></script>
+  <script src="data/enemies.js?v=2026-11-22.11"></script>
+  <script src="data/autochess-rounds.js?v=2026-11-22.11"></script>
+  <script src="data/equipment.js?v=2026-11-22.11"></script>
+  <script src="data/commands.js?v=2026-11-22.11"></script>
+  <script src="data/autochess-traits.js?v=2026-11-22.11"></script>
+  <script src="data/autochess-modules.js?v=2026-11-22.11"></script>
+  <script src="src/calc.js?v=2026-11-22.11"></script>
+  <script src="src/app.js?v=2026-11-22.11"></script>
 </body>
 </html>

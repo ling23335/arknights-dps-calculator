@@ -4,6 +4,7 @@
   const snapshot = window.ARK_OPERATOR_SNAPSHOT;
   const covenantSnapshot = window.ARK_COVENANT_SNAPSHOT;
   const enemySnapshot = window.ARK_ENEMY_SNAPSHOT;
+  const roundSnapshot = window.ARK_AUTOCHESS_ROUNDS_SNAPSHOT;
   const equipmentSnapshot = window.ARK_EQUIPMENT_SNAPSHOT;
   const commandSnapshot = window.ARK_COMMANDS_SNAPSHOT;
   const traitSnapshot = window.ARK_AUTOCHESS_TRAITS_SNAPSHOT;
@@ -13,6 +14,7 @@
     !snapshot?.operators?.length ||
     !covenantSnapshot?.covenants?.length ||
     !enemySnapshot?.enemies?.length ||
+    !roundSnapshot?.modes?.mode_multi_abyss?.rounds?.length ||
     !equipmentSnapshot?.equipment?.length ||
     !commandSnapshot?.commands?.length ||
     !traitSnapshot?.traits?.length ||
@@ -40,6 +42,21 @@
   const covenantMap = new Map(covenants.map((bond) => [bond.bondId, bond]));
   const enemies = enemySnapshot.enemies;
   const enemyMap = new Map(enemies.map((enemy) => [enemy.enemyId, enemy]));
+  const bossEnemyById = new Map(
+    enemies
+      .filter((enemy) => enemy.category === 'boss' && enemy.bossId)
+      .map((enemy) => [enemy.bossId, enemy]),
+  );
+  const autochessModes = roundSnapshot.modeOrder
+    .map((modeId) => roundSnapshot.modes[modeId])
+    .filter(Boolean);
+  const autochessModeMap = new Map(
+    autochessModes.map((mode) => [mode.id, mode]),
+  );
+  const enemyEffects = roundSnapshot.enemyEffects ?? [];
+  const enemyEffectMap = new Map(
+    enemyEffects.map((effect) => [effect.id, effect]),
+  );
   const equipment = equipmentSnapshot.equipment;
   const equipmentMap = new Map(
     equipment.map((item) => [item.id, item]),
@@ -246,6 +263,10 @@
       res: enemyMap.get(defaultEnemyId)?.resistance ?? 30,
       useStronghold: true,
       selectedId: defaultEnemyId,
+      modeId: 'mode_multi_abyss',
+      round: 14,
+      variantIndex: 0,
+      enemyEffectId: '',
       roomSize: 4,
       targetCount: 6,
     },
@@ -313,6 +334,17 @@
     '#stronghold-enemy-type',
   );
   const strongholdEnemySelect = document.querySelector('#stronghold-enemy');
+  const strongholdMode = document.querySelector('#stronghold-mode');
+  const strongholdRound = document.querySelector('#stronghold-round');
+  const strongholdRoundVariant = document.querySelector(
+    '#stronghold-round-variant',
+  );
+  const strongholdEnemyEffect = document.querySelector(
+    '#stronghold-enemy-effect',
+  );
+  const strongholdWaveSummary = document.querySelector(
+    '#stronghold-wave-summary',
+  );
   const strongholdRoomSize = document.querySelector('#stronghold-room-size');
   const strongholdEnemyProfile = document.querySelector(
     '#stronghold-enemy-profile',
@@ -745,7 +777,11 @@
           const activeBonds = state.covenants.enabled
             ? selectedBonds().filter((bond) => {
                 const settings = state.covenants.settings[bond.bondId];
-                return settings && settings.members >= bond.activeCount;
+                return (
+                  bondAvailableInSelectedMode(bond) &&
+                  settings &&
+                  settings.members >= bond.activeCount
+                );
               }).length
             : 0;
           effects.attackBonus +=
@@ -792,7 +828,9 @@
       };
     }
     const selected = new Set(
-      state.covenants.enabled ? state.covenants.selectedIds : [],
+      state.covenants.enabled
+        ? state.covenants.selectedIds.filter(bondAvailableInSelectedMode)
+        : [],
     );
     const layers = trait.bondIds.flatMap((bondId) => {
       if (!selected.has(bondId)) return [];
@@ -1033,7 +1071,7 @@
   }
 
   function focusedCovenant() {
-    const bands = selectedBonds();
+    const bands = selectedBonds().filter(bondAvailableInSelectedMode);
     let bond = bands.find((item) => item.bondId === state.chartCovenantId);
     if (!bond && bands.length) {
       bond = bands[0];
@@ -1066,7 +1104,13 @@
   }
 
   function covenantImpactsOperator(bond, operator) {
-    if (!bond || !bondMatchesOperator(bond, operator)) return false;
+    if (
+      !bond ||
+      !bondAvailableInSelectedMode(bond) ||
+      !bondMatchesOperator(bond, operator)
+    ) {
+      return false;
+    }
     const settings = state.covenants.settings[bond.bondId];
     const evaluation = calc.evaluateCovenant(
       bond,
@@ -1100,7 +1144,9 @@
     const trait = traitMap.get(operator.id);
     const bonds = (trait?.bondIds ?? [])
       .map((bondId) => covenantMap.get(bondId))
-      .filter(Boolean);
+      .filter(
+        (bond) => bond && bondAvailableInSelectedMode(bond),
+      );
     return (
       bonds.find((bond) => covenantImpactsOperator(bond, operator)) ??
       bonds[0] ??
@@ -1163,6 +1209,7 @@
       : null;
 
     for (const bond of selectedBonds()) {
+      if (!bondAvailableInSelectedMode(bond)) continue;
       const settings = state.covenants.settings[bond.bondId];
       if (
         !settings ||
@@ -1303,18 +1350,19 @@
     });
 
     covenantListElement.innerHTML = filtered
-      .map(
-        (bond) => `
-          <button class="covenant-card ${selected.has(bond.bondId) ? 'selected' : ''} ${bond.bondType === 2 ? 'core' : 'extra'}"
-            type="button" data-covenant-pick="${escapeHtml(bond.bondId)}">
+      .map((bond) => {
+        const available = bondAvailableInSelectedMode(bond);
+        return `
+          <button class="covenant-card ${selected.has(bond.bondId) ? 'selected' : ''} ${bond.bondType === 2 ? 'core' : 'extra'} ${available ? '' : 'mode-unavailable'}"
+            type="button" data-covenant-pick="${escapeHtml(bond.bondId)}" ${available ? '' : `aria-disabled="true" title="${escapeHtml(selectedAutochessMode()?.name ?? '')}不可用"`}>
             <span class="covenant-card-top">
               <b>${escapeHtml(bond.name)}</b>
-              <i>${covenantTypeLabel(bond)}</i>
+              <i>${available ? covenantTypeLabel(bond) : '本难度不可用'}</i>
             </span>
             <span class="covenant-card-meta">${bond.activeCount} 人激活 · ${bond.members.length} 名成员</span>
             <span class="covenant-card-desc">${escapeHtml(covenantText(bond.description))}</span>
-          </button>`,
-      )
+          </button>`;
+      })
       .join('');
     if (!filtered.length) {
       covenantListElement.innerHTML =
@@ -1343,6 +1391,7 @@
     covenantSelectedList.innerHTML = bonds
       .map((bond) => {
         const settings = state.covenants.settings[bond.bondId];
+        const available = bondAvailableInSelectedMode(bond);
         const evaluation = calc.evaluateCovenant(
           bond,
           settings.layer,
@@ -1364,10 +1413,10 @@
           })
           .join('');
         return `
-          <article class="selected-covenant ${evaluation.active ? 'active' : 'inactive'}" data-selected-bond="${escapeHtml(bond.bondId)}">
+          <article class="selected-covenant ${evaluation.active && available ? 'active' : 'inactive'}" data-selected-bond="${escapeHtml(bond.bondId)}">
             <div class="selected-covenant-head">
               <div>
-                <span>${covenantTypeLabel(bond)} · ${bond.activeCount} 人激活</span>
+                <span>${available ? `${covenantTypeLabel(bond)} · ${bond.activeCount} 人激活` : `${selectedAutochessMode()?.name ?? '当前难度'}禁用`}</span>
                 <h4>${escapeHtml(bond.name)}</h4>
               </div>
               <button type="button" data-covenant-remove="${escapeHtml(bond.bondId)}" aria-label="移除${escapeHtml(bond.name)}">×</button>
@@ -1423,11 +1472,14 @@
     });
     const active = selectedBonds().filter((bond) => {
       const settings = state.covenants.settings[bond.bondId];
-      return settings.members >= bond.activeCount;
+      return (
+        bondAvailableInSelectedMode(bond) &&
+        settings.members >= bond.activeCount
+      );
     }).length;
     covenantSummaryElement.innerHTML = `
       <article><span>已选盟约</span><strong>${state.covenants.selectedIds.length}</strong><small>共 ${covenants.length} 条</small></article>
-      <article><span>达到激活</span><strong>${active}</strong><small>人数条件已满足</small></article>
+      <article><span>当前生效</span><strong>${active}</strong><small>已满足人数与本难度限制</small></article>
       ${slots.join('')}`;
   }
 
@@ -1459,15 +1511,20 @@
     const rows = bonds
       .map((bond) => ({
         bond,
+        available: bondAvailableInSelectedMode(bond),
         matchedSlots: state.slots.flatMap((slot, index) =>
           bondAffectsSlot(bond, slot) ? [index] : [],
         ),
       }))
-      .filter(({ matchedSlots }) =>
-        matchedSlots.some((index) => occupiedIndexes.has(index)),
+      .filter(
+        ({ available, matchedSlots }) =>
+          available &&
+          matchedSlots.some((index) => occupiedIndexes.has(index)),
       );
     const hiddenBonds = bonds.filter(
-      (bond) => !rows.some((row) => row.bond.bondId === bond.bondId),
+      (bond) =>
+        !rows.some((row) => row.bond.bondId === bond.bondId) ||
+        !bondAvailableInSelectedMode(bond),
     );
     if (
       rows.length &&
@@ -1820,11 +1877,188 @@
     }[key] ?? key;
   }
 
+  function selectedAutochessMode() {
+    return (
+      autochessModeMap.get(state.enemy.modeId) ??
+      autochessModeMap.get('mode_multi_abyss') ??
+      autochessModes[0] ??
+      null
+    );
+  }
+
+  function selectedAutochessRound() {
+    const mode = selectedAutochessMode();
+    if (!mode) return null;
+    return (
+      mode.rounds.find((entry) => entry.round === state.enemy.round) ??
+      mode.rounds.at(-1) ??
+      null
+    );
+  }
+
+  function selectedAutochessVariant() {
+    const round = selectedAutochessRound();
+    if (!round?.variants?.length) return null;
+    const index = Math.max(
+      0,
+      Math.min(round.variants.length - 1, state.enemy.variantIndex),
+    );
+    return round.variants[index] ?? null;
+  }
+
+  function selectedEnemyEffect() {
+    return enemyEffectMap.get(state.enemy.enemyEffectId) ?? null;
+  }
+
+  function effectiveAutochessMode() {
+    const mode = selectedAutochessMode();
+    if (!mode) return null;
+    return {
+      ...mode,
+      attackFactor: roundSnapshot.factors?.attack ?? 5,
+      defenseFactor: roundSnapshot.factors?.defense ?? 3,
+      resistanceFactor: roundSnapshot.factors?.resistance ?? 3,
+    };
+  }
+
+  function bondAvailableInSelectedMode(bondOrId) {
+    if (!state.enemy.useStronghold) return true;
+    const bondId =
+      typeof bondOrId === 'string' ? bondOrId : bondOrId?.bondId;
+    const inactive = selectedAutochessMode()?.inactiveBondIds ?? [];
+    return !inactive.includes(bondId);
+  }
+
+  function resolvedStrongholdEnemy(enemy = enemyMap.get(state.enemy.selectedId)) {
+    if (!enemy) return null;
+    const mode = effectiveAutochessMode();
+    const bossHpByMode = Object.fromEntries(
+      Object.entries(roundSnapshot.bossHpByMode ?? {}).map(
+        ([bossId, hpByMode]) => [
+          bossId,
+          hpByMode?.[mode?.id ?? state.enemy.modeId],
+        ],
+      ),
+    );
+    return {
+      ...enemy,
+      ...calc.resolveAutochessEnemyStats(enemy, mode, {
+        bossHpByMode,
+        enemyEffect: selectedEnemyEffect(),
+      }),
+      baseEnemy: enemy,
+    };
+  }
+
   function strongholdTargetHp(enemy) {
     if (!enemy) return Infinity;
+    const resolved = resolvedStrongholdEnemy(enemy);
     return enemy.category === 'boss'
-      ? calc.sharedBossHp(enemy.hp, state.enemy.roomSize)
-      : enemy.hp;
+      ? calc.sharedBossHp(resolved.hp, state.enemy.roomSize)
+      : resolved.hp;
+  }
+
+  function formatHpRange(min, max) {
+    return min === max
+      ? number.format(min)
+      : `${number.format(min)}–${number.format(max)}`;
+  }
+
+  function renderAutochessEnemyControls() {
+    strongholdMode.innerHTML = autochessModes
+      .map(
+        (mode) =>
+          `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)} · ×${decimal.format(mode.factor)}</option>`,
+      )
+      .join('');
+
+    const mode = selectedAutochessMode();
+    if (!mode) return;
+    if (!mode.rounds.some((entry) => entry.round === state.enemy.round)) {
+      state.enemy.round = mode.rounds.at(-1)?.round ?? 1;
+    }
+    strongholdMode.value = mode.id;
+    strongholdRound.innerHTML = mode.rounds
+      .map((round) =>
+        `<option value="${round.round}">第 ${round.round} 回合${round.bossIds.length ? ' · 领袖波' : ''}</option>`,
+      )
+      .join('');
+    strongholdRound.value = String(state.enemy.round);
+
+    const round = selectedAutochessRound();
+    state.enemy.variantIndex = Math.max(
+      0,
+      Math.min(
+        Math.max(0, (round?.variants?.length ?? 1) - 1),
+        state.enemy.variantIndex,
+      ),
+    );
+    strongholdRoundVariant.innerHTML = (round?.variants ?? [])
+      .map((variant, index) => {
+        const boss = variant.bossId
+          ? bossEnemyById.get(variant.bossId)
+          : null;
+        return `<option value="${index}">波次 ${index + 1}${boss ? ` · ${escapeHtml(boss.name)}` : ''} · ${variant.spawnCount} 敌</option>`;
+      })
+      .join('');
+    strongholdRoundVariant.value = String(state.enemy.variantIndex);
+
+    strongholdEnemyEffect.innerHTML = [
+      `<option value="">不启用敌方效果</option>`,
+      ...enemyEffects.map((effect) => {
+        const changes = [];
+        if (effect.hpMultiplier !== 1) {
+          changes.push(
+            `HP ${effect.hpMultiplier > 1 ? '+' : ''}${decimal.format((effect.hpMultiplier - 1) * 100)}%`,
+          );
+        }
+        if (effect.attackMultiplier !== 1) {
+          changes.push(
+            `ATK ${effect.attackMultiplier > 1 ? '+' : ''}${decimal.format((effect.attackMultiplier - 1) * 100)}%`,
+          );
+        }
+        if (effect.attackSpeedAdd) {
+          changes.push(`攻速 +${decimal.format(effect.attackSpeedAdd)}`);
+        }
+        if (effect.moveSpeedAdd) {
+          changes.push(
+            `移速 +${decimal.format(effect.moveSpeedAdd * 100)}%`,
+          );
+        }
+        return `<option value="${escapeHtml(effect.id)}">${escapeHtml(effect.name)} · ${escapeHtml(changes.join(' / ') || '仅特殊机制')}</option>`;
+      }),
+    ].join('');
+    strongholdEnemyEffect.value = enemyEffectMap.has(
+      state.enemy.enemyEffectId,
+    )
+      ? state.enemy.enemyEffectId
+      : '';
+    state.enemy.enemyEffectId = strongholdEnemyEffect.value;
+    renderStrongholdWaveSummary();
+  }
+
+  function renderStrongholdWaveSummary() {
+    const mode = selectedAutochessMode();
+    const round = selectedAutochessRound();
+    const variant = selectedAutochessVariant();
+    if (!mode || !round || !variant || !strongholdWaveSummary) return;
+    const boss = variant.bossId ? bossEnemyById.get(variant.bossId) : null;
+    const bossHp = boss
+      ? roundSnapshot.bossHpByMode?.[boss.bossId]?.[mode.id]
+      : null;
+    const randomSummary = roundSnapshot.randomEnemyAttributes;
+    strongholdWaveSummary.innerHTML = `
+      <span>本波普通敌人总血<br><b>${number.format(variant.normalHp)}</b></span>
+      <span>生成数量<br><b>${number.format(variant.spawnCount)}</b></span>
+      <span>全回合普通血量<br><b>${formatHpRange(round.normalHpMin, round.normalHpMax)}</b></span>
+      <span>本波领袖<br><b>${boss ? escapeHtml(boss.name) : '无'}</b>${bossHp ? ` · 单体 ${number.format(bossHp)}` : ''}</span>
+      ${
+        variant.randomSpawnCount || variant.hiddenSpawnCount
+          ? `<p>本波含 ${variant.randomSpawnCount} 个随机替换槽、${variant.hiddenSpawnCount} 个隐藏组生成槽；具体替换目标必须从运行时状态确认。</p>`
+          : '<p>本波没有随机替换或隐藏组生成项；基础血量可直接复现。</p>'
+      }
+      <p>随机替换表共 ${number.format(randomSummary?.count ?? 0)} 条，等级字段均为 ${escapeHtml((randomSummary?.levelValues ?? [0]).join(' / '))}；它不是额外生命倍率。</p>
+    `;
   }
 
   function renderStrongholdEnemyOptions() {
@@ -1856,10 +2090,10 @@
     ].map(([category, label]) => {
       const rows = visible
         .filter((enemy) => enemy.category === category)
-        .map(
-          (enemy) =>
-            `<option value="${escapeHtml(enemy.enemyId)}">${escapeHtml(enemy.name)}${enemy.typeName ? ` · ${escapeHtml(enemy.typeName)}` : ''} · ${number.format(enemy.defense)} 防 / ${decimal.format(enemy.resistance)}% 抗</option>`,
-        )
+        .map((enemy) => {
+          const resolved = resolvedStrongholdEnemy(enemy);
+          return `<option value="${escapeHtml(enemy.enemyId)}">${escapeHtml(enemy.name)}${enemy.typeName ? ` · ${escapeHtml(enemy.typeName)}` : ''} · ${number.format(resolved.defense)} 防 / ${decimal.format(resolved.resistance)}% 抗</option>`;
+        })
         .join('');
       return rows ? `<optgroup label="${label}">${rows}</optgroup>` : '';
     });
@@ -1874,8 +2108,9 @@
       strongholdEnemySelect.value = enemy.enemyId;
       state.enemy.selectedId = enemy.enemyId;
       if (state.enemy.useStronghold) {
-        state.enemy.def = Math.max(0, enemy.defense);
-        state.enemy.res = Math.max(0, enemy.resistance);
+        const resolved = resolvedStrongholdEnemy(enemy);
+        state.enemy.def = Math.max(0, resolved.defense);
+        state.enemy.res = Math.max(0, resolved.resistance);
         syncEnemyInputs();
       }
       renderStrongholdEnemyProfile();
@@ -1919,21 +2154,24 @@
       strongholdEnemyProfile.innerHTML = '<span>未选择敌人</span>';
       return;
     }
+    const mode = selectedAutochessMode();
+    const effect = selectedEnemyEffect();
+    const resolved = resolvedStrongholdEnemy(enemy);
     strongholdEnemyProfile.innerHTML = `
       <strong>${escapeHtml(enemy.name)}</strong>
-      <span>终极模拟 · ${escapeHtml(enemyCategoryLabel(enemy))} · ${escapeHtml(enemy.enemyIndex || enemy.enemyId)}</span>
+      <span>${escapeHtml(mode?.name ?? '卫戍')} · ${escapeHtml(enemyCategoryLabel(enemy))} · ${escapeHtml(enemy.enemyIndex || enemy.enemyId)}</span>
       <div>
-        <i>单体生命 ${number.format(enemy.hp ?? 0)}</i>
+        <i>单体生命 ${number.format(resolved.hp ?? 0)}</i>
         ${
           enemy.category === 'boss'
             ? `<i>${state.enemy.roomSize} 人共享总血 ${number.format(strongholdTargetHp(enemy))}</i>`
-            : '<i>单体生命不按人数放大</i>'
+            : `<i>基础生命 ${number.format(enemy.baseHp ?? 0)} × ${decimal.format(mode?.factor ?? 1)}</i>`
         }
-        <i>攻击 ${number.format(enemy.attack ?? 0)}</i>
-        <i>防御（物理端） ${number.format(enemy.defense)}</i>
-        <i>法术抗性 ${decimal.format(enemy.resistance)}%</i>
+        <i>攻击 ${number.format(resolved.attack ?? 0)}</i>
+        <i>防御（物理端） ${number.format(resolved.defense)}</i>
+        <i>法术抗性 ${decimal.format(resolved.resistance)}%</i>
         <i>攻击间隔 ${decimal.format(enemy.attackInterval ?? 0)}s</i>
-        <i>移动速度 ${decimal.format(enemy.moveSpeed ?? 0)}</i>
+        <i>移动速度 ${decimal.format(resolved.moveSpeed ?? 0)}</i>
         <i>重量等级 ${number.format(enemy.massLevel ?? 0)}</i>
         <i>生命损失 ${number.format(enemy.lifePointReduce ?? 0)}</i>
       </div>
@@ -1986,8 +2224,13 @@
         )}</pre>
       </details>
       <details class="enemy-factor-details">
-        <summary>终极数值来源</summary>
-        <p>模式生命/攻击/防御 ×${enemy.ultimate?.modeFactor ?? 1}；攻击 ×${enemy.ultimate?.attackFactor ?? 1}；防御 ×${enemy.ultimate?.defenseFactor ?? 1}；法抗 ×${enemy.ultimate?.resistanceFactor ?? 1}。${enemy.ultimate?.hpSource === 'boss blood table' ? '领袖生命取游戏终极血量表。' : '生命按模式倍率计算。'}</p>
+        <summary>卫戍数值来源</summary>
+        <p>${escapeHtml(mode?.name ?? '卫戍')}：普通属性难度 ×${decimal.format(mode?.factor ?? 1)}、攻击 ×${decimal.format(roundSnapshot.factors?.attack ?? 5)}、防御 ×${decimal.format(roundSnapshot.factors?.defense ?? 3)}、法抗 ×${decimal.format(roundSnapshot.factors?.resistance ?? 3)}。${enemy.category === 'boss' ? '领袖生命直接读取当前难度 BloodDataDict，不再乘难度倍率。' : '普通敌人生命按难度倍率计算。'}</p>
+        ${
+          effect
+            ? `<p>可选敌方效果：${escapeHtml(effect.name)}；生命 ×${decimal.format(effect.hpMultiplier)}、攻击 ×${decimal.format(effect.attackMultiplier)}、攻速 +${decimal.format(effect.attackSpeedAdd)}、移速 ${effect.moveSpeedAdd > 0 ? '+' : ''}${decimal.format(effect.moveSpeedAdd * 100)}%。</p>`
+            : '<p>当前没有叠加可选敌方效果。</p>'
+        }
       </details>`;
   }
 
@@ -2007,8 +2250,10 @@
   function applyStrongholdEnemy() {
     const enemy = enemyMap.get(state.enemy.selectedId);
     if (!enemy) return;
-    state.enemy.def = Math.max(0, enemy.defense);
-    state.enemy.res = Math.max(0, enemy.resistance);
+    const resolved = resolvedStrongholdEnemy(enemy);
+    state.enemy.def = Math.max(0, resolved.defense);
+    state.enemy.res = Math.max(0, resolved.resistance);
+    renderStrongholdWaveSummary();
     syncEnemyInputs();
     renderStrongholdEnemyProfile();
     updateResults();
@@ -2017,6 +2262,7 @@
   function syncStrongholdEnemyUI() {
     strongholdEnemyEnabled.checked = state.enemy.useStronghold;
     strongholdRoomSize.value = String(state.enemy.roomSize);
+    renderAutochessEnemyControls();
     strongholdEnemyPanel.classList.toggle(
       'is-disabled',
       !state.enemy.useStronghold,
@@ -2259,12 +2505,15 @@
     const chargeBased = slot.chargeBased && slot.duration <= 0;
     const useSpState =
       slot.spMode === 'natural' || slot.spMode === 'attack';
-    const strongholdEnemy = state.enemy.useStronghold
+    const strongholdEnemyRaw = state.enemy.useStronghold
       ? enemyMap.get(state.enemy.selectedId)
       : null;
-    const enemyHp =
-      enemy.hp ??
-      (strongholdEnemy ? strongholdTargetHp(strongholdEnemy) : Infinity);
+    const strongholdEnemy = strongholdEnemyRaw
+      ? resolvedStrongholdEnemy(strongholdEnemyRaw)
+      : null;
+    const enemyHp = strongholdEnemyRaw
+      ? strongholdTargetHp(strongholdEnemyRaw)
+      : enemy.hp ?? Infinity;
     const combatEnemy = {
       ...(strongholdEnemy ?? {}),
       ...enemy,
@@ -2782,6 +3031,7 @@
 
   function renderKillCalculator() {
     const enemy = enemyMap.get(state.enemy.selectedId);
+    const resolved = resolvedStrongholdEnemy(enemy);
     const targetHp = strongholdTargetHp(enemy);
     const limit = Math.max(0.1, Number(state.killLimit) || 5);
     const results =
@@ -2796,14 +3046,14 @@
     document.querySelector('#kill-target-name').textContent =
       enemy?.name ?? '未选择敌人';
     document.querySelector('#kill-target-meta').textContent = enemy
-      ? `${enemy.ultimate?.modeName ?? '终极模拟'} · ${enemyCategoryLabel(enemy)} · ${enemy.enemyIndex || enemy.enemyId}${enemy.category === 'boss' ? ` · ${state.enemy.roomSize} 人共享总血` : ''}`
+      ? `${selectedAutochessMode()?.name ?? '卫戍'} · ${enemyCategoryLabel(enemy)} · ${enemy.enemyIndex || enemy.enemyId}${enemy.category === 'boss' ? ` · ${state.enemy.roomSize} 人共享总血` : ''}${selectedEnemyEffect() ? ` · ${selectedEnemyEffect().name}` : ''}`
       : '请先在上方敌人参数中选择目标';
     document.querySelector('#kill-target-stats').innerHTML = enemy
       ? `
         <span>${enemy.category === 'boss' ? '共享总生命' : '生命'}<br><b>${number.format(targetHp)}</b></span>
-        <span>攻击<br><b>${number.format(enemy.attack)}</b></span>
-        <span>防御<br><b>${number.format(enemy.defense)}</b></span>
-        <span>法抗<br><b>${decimal.format(enemy.resistance)}%</b></span>
+        <span>攻击<br><b>${number.format(resolved.attack)}</b></span>
+        <span>防御<br><b>${number.format(resolved.defense)}</b></span>
+        <span>法抗<br><b>${decimal.format(resolved.resistance)}%</b></span>
         <span>攻击间隔<br><b>${decimal.format(enemy.attackInterval ?? 0)}s</b></span>
         <span>重量<br><b>${number.format(enemy.massLevel ?? 0)}</b></span>`
       : '<span>暂无目标数据</span>';
@@ -3219,7 +3469,9 @@
         ctx.fillStyle = '#ffb168';
         ctx.textAlign = 'right';
         ctx.fillText(
-          state.enemy.useStronghold ? '终极模拟' : '手动参数',
+          state.enemy.useStronghold
+            ? selectedAutochessMode()?.name ?? '卫戍'
+            : '手动参数',
           currentX - 7,
           margin.top + 9,
         );
@@ -3249,8 +3501,8 @@
       ctx.textAlign = 'left';
       const enemyLabel =
         width < 500
-          ? `${enemy ? '终极敌' : '手动敌'} ${enemy?.enemyIndex ?? ''} · ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`
-          : `${enemy ? `终极敌人：${enemy.name} · ${number.format(strongholdTargetHp(enemy))} ${enemy.category === 'boss' ? `${state.enemy.roomSize} 人共享总生命` : '生命'}` : '手动敌人参数'} / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
+          ? `${enemy ? '卫戍敌' : '手动敌'} ${enemy?.enemyIndex ?? ''} · ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`
+          : `${enemy ? `卫戍敌人：${enemy.name} · ${number.format(strongholdTargetHp(enemy))} ${enemy.category === 'boss' ? `${state.enemy.roomSize} 人共享总生命` : '生命'}` : '手动敌人参数'} / ${number.format(state.enemy.def)} 防 / ${decimal.format(state.enemy.res)}% 抗`;
       ctx.fillText(
         enemyLabel,
         margin.left + 8,
@@ -3395,7 +3647,7 @@
       .addEventListener('change', renderCovenantBrowser);
     covenantListElement.addEventListener('click', (event) => {
       const button = event.target.closest('[data-covenant-pick]');
-      if (!button) return;
+      if (!button || button.getAttribute('aria-disabled') === 'true') return;
       const bondId = button.dataset.covenantPick;
       const selected = state.covenants.selectedIds;
       const index = selected.indexOf(bondId);
@@ -3645,7 +3897,38 @@
     strongholdEnemyEnabled.addEventListener('change', (event) => {
       state.enemy.useStronghold = event.target.checked;
       syncStrongholdEnemyUI();
+      renderCovenants();
       updateResults();
+    });
+    strongholdMode.addEventListener('change', (event) => {
+      state.enemy.modeId = event.target.value;
+      const mode = selectedAutochessMode();
+      if (!mode?.rounds.some((round) => round.round === state.enemy.round)) {
+        state.enemy.round = mode?.rounds.at(-1)?.round ?? 1;
+      }
+      state.enemy.variantIndex = 0;
+      renderAutochessEnemyControls();
+      renderStrongholdEnemyOptions();
+      renderCovenants();
+      applyStrongholdEnemy();
+    });
+    strongholdRound.addEventListener('change', (event) => {
+      state.enemy.round = Number(event.target.value) || 1;
+      state.enemy.variantIndex = 0;
+      renderAutochessEnemyControls();
+      applyStrongholdEnemy();
+    });
+    strongholdRoundVariant.addEventListener('change', (event) => {
+      state.enemy.variantIndex = Math.max(
+        0,
+        Number(event.target.value) || 0,
+      );
+      renderStrongholdWaveSummary();
+    });
+    strongholdEnemyEffect.addEventListener('change', (event) => {
+      state.enemy.enemyEffectId = event.target.value;
+      renderStrongholdEnemyOptions();
+      applyStrongholdEnemy();
     });
     strongholdEnemySearch.addEventListener(
       'input',
@@ -3743,6 +4026,10 @@
       res: defaultEnemy?.resistance ?? 30,
       useStronghold: true,
       selectedId: defaultEnemyId,
+      modeId: 'mode_multi_abyss',
+      round: 14,
+      variantIndex: 0,
+      enemyEffectId: '',
       roomSize: 4,
       targetCount: 6,
     };
@@ -3750,6 +4037,7 @@
     document.querySelector('#chart-axis').value = 'covenant';
     strongholdEnemySearch.value = '';
     strongholdEnemyType.value = 'all';
+    renderAutochessEnemyControls();
     renderStrongholdEnemyOptions();
     syncStrongholdEnemyUI();
     resetCovenants();
@@ -3790,6 +4078,11 @@
         '回转',
         '敌人防御',
         '敌方法抗',
+        '模拟难度',
+        '回合',
+        '波次',
+        '波次普通敌人总血',
+        '敌方效果',
         '房间人数',
         '当前目标生命',
         '命中盟约',
@@ -3841,6 +4134,11 @@
           item.result.readyTime,
           state.enemy.def,
           state.enemy.res,
+          selectedAutochessMode()?.name ?? '',
+          state.enemy.round,
+          state.enemy.variantIndex + 1,
+          selectedAutochessVariant()?.normalHp ?? '',
+          selectedEnemyEffect()?.name ?? '',
           state.enemy.roomSize,
           strongholdTargetHp(enemyMap.get(state.enemy.selectedId)),
           item.covenant.applied.map((entry) => entry.bond.name).join('、'),
@@ -3941,7 +4239,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-22.10 · 卫戍干员 ${operators.length} · 终极敌人 ${enemies.length} · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-22.11 · 卫戍干员 ${operators.length} · 卫戍敌人 ${enemies.length} · 4 难度 / 59 回合 · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),
@@ -3957,6 +4255,7 @@
     .join('');
   buildSlots();
   initEnemyTypeFilter();
+  renderAutochessEnemyControls();
   renderStrongholdEnemyOptions();
   syncStrongholdEnemyUI();
   renderCovenantRanking();
