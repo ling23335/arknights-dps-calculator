@@ -30,6 +30,61 @@
   `lateranoShip`, and 12 tier-5/tier-6 DIY slots have no `CharId` until runtime
   selection.
 
+### Extracted file and auxiliary-table audit
+
+- The extracted `activities.ab` manifest contains 987 assets. Exactly 92 names
+  belong to the current AutoChess season: 91 level assets plus
+  `level_autochess_enemy_data`.
+- The live `PersistentData/Bundles` tree contains 83 file paths matching
+  AutoChess:
+  - 1 activity TextAsset bundle
+  - 30 battle-level prefab bundles
+  - 10 level-scene bundles
+  - 30 map-preview bundles
+  - 5 UI bundles
+  - 5 audio bundles
+  - 1 zone-home sprite bundle
+  - 1 furniture bundle
+  These non-calculator bundles are visual/audio/UI assets; the numeric level
+  data comes from the activity TextAsset bundle.
+- The current hot-download tree contains 33 AutoChess level-prefab `.dat`
+  files, matching the battle-prefab layer rather than an additional numeric
+  data table.
+- All 91 `level_act3autochess*` assets were structurally parsed. Forty-five are
+  referenced directly by current `BattleDataDict`; the remaining 46 are
+  activity-stage, training, escape or auxiliary board assets and were still
+  inspected for actions, options, branches and enemy references.
+- Across all 26 modes, `BattleDataDict` references 48 level names. Forty-five
+  exist in the current AutoChess bundle. Three older training references
+  (`level_act1autochess_tr01`, `tr02`, `tr04`) are not present in the extracted
+  bundle and remain a known extraction gap; they are not used by the four
+  multiplayer calculator modes.
+- Twenty-two `act1vautochess` tutorial TextAssets were found. Base and hot
+  versions are byte-identical. They contain no phrase or rule establishing a
+  shared card pool.
+- Eleven encrypted Lua hotfix assets were found; their decrypted copies were
+  read. They cover UI/OB state, help battle, boss-step tracking, map layers,
+  Garrison refresh and bond-ID assignment. They contain no local shop-pool
+  algorithm.
+- Auxiliary-table matches were classified:
+  - `stage_table`: stage IDs, level IDs and map previews.
+  - `battle_misc`: AutoChess board rectangles, camera positions and effect keys.
+  - `zone_table`: AutoChess zone IDs only.
+  - `display_meta`: emotes, stickers and keyboard bindings.
+  - `audio_data`: BGM/SE aliases and asset paths.
+  - `story_table`: tutorial/story routing and trigger keys.
+  - `item_table`: event tokens and emote items.
+  - `medal_table`: achievement records.
+  - `building_data`: one furniture item.
+  - `buff_table`: five marker/immunity buffs, not damage formulas.
+  - `gamedata_const` and operator `skill_table`: no direct AutoChess references.
+- The `arbitrated/server_covenants.json` snapshot is byte-identical to the
+  calculator's `data/covenants.json`; it is derived project data, not an
+  independent second source.
+- Current `AutoChessData` also exposes 21 game tips, 12 effect categories, 51
+  skill-trigger rules and 58 summon-token display entries. These are retained
+  in the generated snapshot instead of being discarded.
+
 ### Level FlatBuffers
 
 - Every action in the 91 AutoChess levels is `SPAWN`; no alternate action

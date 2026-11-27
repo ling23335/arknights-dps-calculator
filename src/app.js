@@ -2125,6 +2125,11 @@
     const specialEnemyCount = Object.values(
       roundSnapshot.specialEnemyPools ?? {},
     ).reduce((sum, pool) => sum + (pool.count ?? 0), 0);
+    const turnInfo = (
+      roundSnapshot.turnInfoByMode?.[mode.id] ?? []
+    )
+      .flatMap((entry) => Object.values(entry ?? {}))
+      .find((entry) => Number(entry?.Round) === Number(round.round));
     const cardCounts = Object.entries(roundSnapshot.cardPool ?? {})
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([tier, cards]) => `${tier}阶 ${cards.visible?.length ?? 0}`)
@@ -2135,13 +2140,14 @@
       <span>全回合普通血量<br><b>${formatHpRange(round.normalHpMin, round.normalHpMax)}</b></span>
       <span>本波领袖<br><b>${boss ? escapeHtml(boss.name) : '无'}</b>${bossHp ? ` · 单体 ${number.format(bossHp)}` : ''}</span>
       <span>关卡战斗上限<br><b>${decimal.format(currentBattleTimeLimit())}s</b> · 部署上限 ${number.format(variant.characterLimit ?? 0)}</span>
+      <span>整备阶段<br><b>${decimal.format(turnInfo?.NormalPhaseTime ?? 0)}s</b> · ${turnInfo?.IsBossTurn ? '领袖回合' : '普通回合'}</span>
       ${
         variant.conditionalBranchCount
           ? `<p>另有 ${variant.conditionalBranchCount} 条条件分支，累计 ${variant.conditionalSpawnCount} 个增援，未计入本波基础总血。</p>`
           : '<p>本波没有条件增援分支。</p>'
       }
       <p>运行时替换：每场登记 ${number.format(runtimeRules.minReplacedEnemyCount ?? 0)}–${number.format(runtimeRules.maxReplacedEnemyCount ?? 0)} 个替换位，多人特殊敌人名额 ${number.format(runtimeRules.specialEnemyNum ?? 0)}。随机池共 ${number.format(randomSummary?.count ?? 0)} 条，具体组合取决于本局运行时状态。</p>
-      <p>本难度禁用 ${number.format(modeInactiveCount)} 名敌人；本期每阶可见干员原型：${escapeHtml(cardCounts)}。</p>
+      <p>本难度禁用 ${number.format(modeInactiveCount)} 名敌人；本期每阶可见干员原型：${escapeHtml(cardCounts)}。五/六阶可选自编名额 ${number.format(runtimeRules.diyCharLimitForLevels?.[5] ?? 0)} + ${number.format(runtimeRules.diyCharLimitForLevels?.[6] ?? 0)}。</p>
       ${
         branchRows
           ? `<details class="enemy-branch-details"><summary>查看条件增援分支</summary>${branchRows}</details>`
@@ -2153,7 +2159,17 @@
         <span>${number.format(tableCounts.garrisonEffects ?? 0)} 条驻守/特质效果 · ${number.format(tableCounts.effectInfo ?? 0)} 条总效果表 · ${number.format(tableCounts.effectChoices ?? 0)} 条效果选择</span>
         <span>${number.format(tableCounts.trapChessEntries ?? 0)} 条装备 · ${number.format(tableCounts.skillInfoEntries ?? 0)} 条协议/指令 · ${number.format(specialEnemyCount)} 条特殊敌人池</span>
         <span>${number.format(Object.keys(roundSnapshot.globalEnemyOverrides ?? {}).length)} 条卫戍全局敌人覆盖 · 63 个关卡含条件分支 · 91 个关卡已审计</span>
+        <span>${number.format(roundSnapshot.gameTips?.length ?? 0)} 条游戏机制提示 · ${number.format(Object.keys(roundSnapshot.effectTypes ?? {}).length)} 类效果 · ${number.format(roundSnapshot.skillTriggerRules?.length ?? 0)} 条技能触发规则</span>
         <span>${number.format(roundSnapshot.eventEnemyEffects?.length ?? 0)} 条悬赏/战术特训增敌效果与 ${number.format(roundSnapshot.teamChoiceEffects?.length ?? 0)} 条队伍选择效果已保留；无法确定触发组合的增援不伪造进基础血量。</span>
+      </details>
+      <details class="enemy-branch-details">
+        <summary>查看本地游戏机制提示</summary>
+        ${(roundSnapshot.gameTips ?? [])
+          .map(
+            (tip) =>
+              `<span>${escapeHtml(tip.Tip ?? '')}</span>`,
+          )
+          .join('')}
       </details>
     `;
   }
@@ -4372,7 +4388,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-22.12 · 卫戍干员 ${operators.length} · 卫戍敌人 ${enemies.length} · 4 难度 / 59 回合 · 26 模式 / 91 关卡审计 · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-22.13 · 卫戍干员 ${operators.length} · 卫戍敌人 ${enemies.length} · 4 难度 / 59 回合 · 26 模式 / 91 关卡 / 92 资源审计 · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),

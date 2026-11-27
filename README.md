@@ -56,6 +56,7 @@ http://电脑IPv4地址:4173/
 - 可启用本地 40 条 `aceffect_enemy_*` 敌方增益/削弱效果；生命与攻击乘区会进入属性解析，攻速与移速参数同时保留展示。
 - 本地 456 条随机替换表只用于运行时选择具体替换敌人，不能把概率或效率系数直接乘到基础波次血量。界面单独标注随机/隐藏生成槽，避免伪造确定性总血。
 - 本地规则登记 1–5 个运行时替换位、多人 3 个特殊敌人名额；这些是运行时预算，不是固定波次倍率。129 条悬赏/战术特训增敌效果和 31 条队伍选择效果已保留供核查。
+- 当前活动表还登记了 21 条游戏机制提示、12 类效果分类、51 条技能触发规则和 58 个召唤物展示项；页面在敌人模块中以折叠形式保留，避免把说明、界面配置和伤害参数混为一谈。
 - 标准模拟只启用本地登记的 18 条盟约；其余三档启用全部 26 条。切换到标准模拟时，本难度不存在的盟约保留配置但不进入 DPS。
 - 使用 60 帧固定步长逐帧模拟攻击命中、技能开启、技能持续与回转，而非只看平均值公式。
 - 每个方案展示当前敌人条件下的普攻 DPH、技能 DPH、模拟窗口总伤和元素爆条总伤；战况图提示与 CSV 同步包含这些字段。
@@ -87,7 +88,7 @@ http://电脑IPv4地址:4173/
 - `data/covenants.js`：供直接打开网页时加载的盟约数据副本。
 - `data/enemies.json`：本地解包整理后的卫戍协议敌人属性。
 - `data/enemies.js`：供直接打开网页时加载的敌人数据副本。
-- `data/autochess-rounds.json`：四档难度、59 个回合、Boss BloodData、波次构成、随机替换表摘要和敌方效果。
+- `data/autochess-rounds.json`：四档难度、59 个回合、Boss BloodData、波次构成、条件分支、本地敌人覆盖、随机替换规则、游戏提示和敌方效果。
 - `data/autochess-rounds.js`：供直接打开网页时加载的回合与难度数据副本。
 - `data/equipment.json`：本地解包整理后的 116 件卫戍装备。
 - `data/equipment.js`：供直接打开网页时加载的装备数据副本。
@@ -114,9 +115,10 @@ npm run audit:roster
 npm run audit:skills
 npm run audit:tables
 npm run audit:levels
+npm run audit:assets
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:rounds` 解析本地关卡 FlatBuffers、四档 BattleData、Boss BloodData、波次生成项、条件分支、EnemyDbRefs、特殊敌人池和全部敌方效果；`extract:traits` 提取卫戍协议干员专属特质与 Garrison 参数；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计；`audit:skills` 校验全部技能 ID、原描述模板、Blackboard 和逐帧模拟结果；`audit:tables` 检查 26 个模式、全部干员原型、商店、盟约、装备、指令和特殊敌人池的引用完整性；`audit:levels` 审计全部 91 个卫戍关卡的 FlatBuffer 字段、分支和本地敌人覆盖。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:rounds` 解析本地关卡 FlatBuffers、四档 BattleData、Boss BloodData、波次生成项、条件分支、EnemyDbRefs、特殊敌人池和全部敌方效果；`extract:traits` 提取卫戍协议干员专属特质与 Garrison 参数；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计；`audit:skills` 校验全部技能 ID、原描述模板、Blackboard 和逐帧模拟结果；`audit:tables` 检查 26 个模式、全部干员原型、商店、盟约、装备、指令和特殊敌人池的引用完整性；`audit:levels` 审计全部 91 个卫戍关卡的 FlatBuffer 字段、分支和本地敌人覆盖；`audit:assets` 审查活动 AssetBundle 清单、教学文本、热修 Lua 和辅助表中所有卫戍引用。写文件前会校验数量和必填文本。
 
 ## 验证
 

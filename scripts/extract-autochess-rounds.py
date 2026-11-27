@@ -634,11 +634,24 @@ def main() -> None:
             "enemyTypeIdentifierToFillRandom": constants.get(
                 "EnemyTypeIdentifierToFillRandom"
             ),
+            "diyCharLimitForLevels": constants.get(
+                "DiyCharLimitForLevels",
+                season.get("ConstData", {}).get(
+                    "DiyCharLimitForLevels", {}
+                ),
+            ),
             "templateEnemyKeys": {
                 key: value
                 for key, value in constants.items()
                 if key.startswith("TemplateEnemy")
             },
+        },
+        "gameTips": auto_data.get("GameTipsList", []),
+        "effectTypes": auto_data.get("EffectTypeDataDict", {}),
+        "skillTriggerRules": auto_data.get("SkillTriggerDataList", []),
+        "turnInfoByMode": {
+            mode_id: auto_data.get("TurnInfoDataDict", {}).get(mode_id, [])
+            for mode_id in MODE_IDS
         },
         "randomEnemyAttributes": random_enemy_attributes,
         "cardPool": card_pool,

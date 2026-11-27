@@ -219,6 +219,9 @@ test('local autochess round snapshot covers all multiplayer rounds and boss tabl
   assert.equal(Object.keys(snapshot.allModes).length, 26);
   assert.equal(snapshot.eventEnemyEffects.length, 129);
   assert.equal(snapshot.teamChoiceEffects.length, 31);
+  assert.equal(snapshot.gameTips.length, 21);
+  assert.equal(snapshot.skillTriggerRules.length, 51);
+  assert.equal(Object.keys(snapshot.effectTypes).length, 12);
   assert.equal(snapshot.randomEnemyAttributes.count, 456);
   assert.deepEqual(snapshot.randomEnemyAttributes.levelValues, [0]);
   assert.equal(
@@ -230,6 +233,10 @@ test('local autochess round snapshot covers all multiplayer rounds and boss tabl
     5,
   );
   assert.equal(snapshot.runtimeEnemyRules.specialEnemyNum, 3);
+  assert.deepEqual(
+    snapshot.runtimeEnemyRules.diyCharLimitForLevels,
+    { 5: 2, 6: 2 },
+  );
   assert.equal(
     snapshot.globalEnemyOverrides.enemy_10163_mnctur_2.stats.hp,
     28000,

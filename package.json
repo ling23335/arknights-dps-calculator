@@ -16,6 +16,7 @@
     "audit:raw-bonds": "node scripts/audit-raw-autochess-bonds.mjs",
     "audit:tables": "node scripts/audit-autochess-tables.mjs",
     "audit:levels": "python scripts/audit-autochess-levels.py",
+    "audit:assets": "node scripts/audit-autochess-assets.mjs",
     "audit:browser": "node scripts/browser-enemy-audit.mjs",
     "serve": "python -m http.server 4173 --bind 0.0.0.0"
   },
