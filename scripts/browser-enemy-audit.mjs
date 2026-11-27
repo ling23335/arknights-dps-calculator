@@ -37,10 +37,38 @@ await page.waitForSelector('#stronghold-mode option', { state: 'attached' });
 assertEqual(await page.locator('#stronghold-mode').inputValue(), 'mode_multi_abyss', 'default mode');
 assertEqual(await page.locator('#stronghold-round').inputValue(), '14', 'default round');
 assertEqual(await profileHp(), 3940000, 'ultimate boss_1 hp');
+const initialWaveSummary = await page
+  .locator('#stronghold-wave-summary')
+  .innerText();
+if (!initialWaveSummary.includes('5 条条件分支')) {
+  throw new Error(
+    `Conditional branch summary is missing: ${initialWaveSummary}`,
+  );
+}
+if (!initialWaveSummary.includes('运行时替换')) {
+  throw new Error(`Runtime replacement summary is missing: ${initialWaveSummary}`);
+}
+await page.locator('#stronghold-round').selectOption('1');
+await page.waitForTimeout(100);
+const openingWaveSummary = await page
+  .locator('#stronghold-wave-summary')
+  .innerText();
+if (!openingWaveSummary.includes('45.0s')) {
+  throw new Error(`Opening battle time limit is missing: ${openingWaveSummary}`);
+}
+await page.locator('#stronghold-round').selectOption('14');
+await page.waitForTimeout(100);
 
 await page.locator('#stronghold-mode').selectOption('mode_multi_funny');
 await page.waitForTimeout(100);
 assertEqual(await profileHp(), 283680, 'standard boss_1 hp');
+const availableEnemyIds = await page
+  .locator('#stronghold-enemy option')
+  .evaluateAll((options) => options.map((option) => option.value));
+assertEqual(availableEnemyIds.length, 440, 'standard available enemies');
+if (availableEnemyIds.includes('enemy_1112_emppnt')) {
+  throw new Error('Mode-inactive enemy is still selectable in standard mode');
+}
 const unavailableCount = await page
   .locator('.covenant-card.mode-unavailable')
   .count();
@@ -52,6 +80,30 @@ assertEqual(await profileHp(), 368784, 'standard boss_1 hp with +30% effect');
 const killStats = await page.locator('#kill-target-stats').innerText();
 if (!killStats.includes('1,475,136')) {
   throw new Error(`Kill calculator did not apply resolved boss HP: ${killStats}`);
+}
+
+await page.locator('#stronghold-enemy-effect').selectOption('');
+await page.locator('#stronghold-enemy-search').fill('');
+await page.locator('#stronghold-enemy').selectOption('enemy_10163_mnctur_2');
+await page.waitForTimeout(100);
+assertEqual(await profileHp(), 28000, 'AutoChess global enemy-data HP override');
+const globalOverrideProfile = await page
+  .locator('#stronghold-enemy-profile')
+  .textContent();
+if (!globalOverrideProfile.includes('卫戍全局 EnemyData 覆盖')) {
+  throw new Error(`Global enemy override is not disclosed: ${globalOverrideProfile}`);
+}
+
+await page.locator('#stronghold-round-variant').selectOption('1');
+await page.locator('#stronghold-enemy-search').fill('');
+await page.locator('#stronghold-enemy').selectOption('enemy_1430_lrrook');
+await page.waitForTimeout(100);
+assertEqual(await profileHp(), 60000, 'level-local EnemyDbRefs HP override');
+const levelOverrideProfile = await page
+  .locator('#stronghold-enemy-profile')
+  .textContent();
+if (!levelOverrideProfile.includes('本关 EnemyDbRefs 覆盖')) {
+  throw new Error(`Level override is not disclosed: ${levelOverrideProfile}`);
 }
 
 await page.locator('#stronghold-mode').selectOption('mode_multi_abyss');

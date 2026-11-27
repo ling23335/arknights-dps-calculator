@@ -1906,6 +1906,13 @@
     return round.variants[index] ?? null;
   }
 
+  function currentBattleTimeLimit() {
+    const maxPlayTime = Number(selectedAutochessVariant()?.maxPlayTime);
+    return Number.isFinite(maxPlayTime) && maxPlayTime > 0
+      ? maxPlayTime
+      : 120;
+  }
+
   function selectedEnemyEffect() {
     return enemyEffectMap.get(state.enemy.enemyEffectId) ?? null;
   }
@@ -1929,9 +1936,52 @@
     return !inactive.includes(bondId);
   }
 
+  function enemyAvailableInSelectedMode(enemyOrId) {
+    if (!state.enemy.useStronghold) return true;
+    const enemyId =
+      typeof enemyOrId === 'string' ? enemyOrId : enemyOrId?.enemyId;
+    const inactive = selectedAutochessMode()?.inactiveEnemyKeys ?? [];
+    return !inactive.includes(enemyId);
+  }
+
+  function selectedLevelEnemyOverride(enemyId) {
+    const variant = selectedAutochessVariant();
+    return variant?.enemyOverrides?.[enemyId] ?? null;
+  }
+
   function resolvedStrongholdEnemy(enemy = enemyMap.get(state.enemy.selectedId)) {
     if (!enemy) return null;
     const mode = effectiveAutochessMode();
+    const globalOverride =
+      roundSnapshot.globalEnemyOverrides?.[enemy.enemyId]?.stats ?? null;
+    const levelOverride = selectedLevelEnemyOverride(enemy.enemyId);
+    const sourceEnemy = { ...enemy };
+    for (const key of [
+      'hp',
+      'attack',
+      'defense',
+      'resistance',
+      'attackInterval',
+      'attackSpeed',
+      'moveSpeed',
+      'massLevel',
+    ]) {
+      const overrideValue =
+        Number(levelOverride?.[key]) > 0
+          ? Number(levelOverride[key])
+          : Number(globalOverride?.[key]) > 0
+            ? Number(globalOverride[key])
+            : 0;
+      if (overrideValue > 0) {
+        const baseKey = {
+          hp: 'baseHp',
+          attack: 'baseAttack',
+          defense: 'baseDefense',
+          resistance: 'baseResistance',
+        }[key];
+        sourceEnemy[baseKey ?? key] = overrideValue;
+      }
+    }
     const bossHpByMode = Object.fromEntries(
       Object.entries(roundSnapshot.bossHpByMode ?? {}).map(
         ([bossId, hpByMode]) => [
@@ -1942,11 +1992,17 @@
     );
     return {
       ...enemy,
-      ...calc.resolveAutochessEnemyStats(enemy, mode, {
+      ...calc.resolveAutochessEnemyStats(sourceEnemy, mode, {
         bossHpByMode,
         enemyEffect: selectedEnemyEffect(),
       }),
+      adjustedBaseHp: sourceEnemy.baseHp,
+      adjustedBaseAttack: sourceEnemy.baseAttack,
+      adjustedBaseDefense: sourceEnemy.baseDefense,
+      adjustedBaseResistance: sourceEnemy.baseResistance,
       baseEnemy: enemy,
+      globalOverride,
+      levelOverride,
     };
   }
 
@@ -1968,7 +2024,7 @@
     strongholdMode.innerHTML = autochessModes
       .map(
         (mode) =>
-          `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)} · ×${decimal.format(mode.factor)}</option>`,
+          `<option value="${escapeHtml(mode.id)}">${escapeHtml(mode.name)} · ×${decimal.format(mode.factor)}${mode.inactiveEnemyKeys?.length ? ` · 禁用 ${mode.inactiveEnemyKeys.length} 敌` : ''}</option>`,
       )
       .join('');
 
@@ -1976,6 +2032,16 @@
     if (!mode) return;
     if (!mode.rounds.some((entry) => entry.round === state.enemy.round)) {
       state.enemy.round = mode.rounds.at(-1)?.round ?? 1;
+    }
+    if (!enemyAvailableInSelectedMode(state.enemy.selectedId)) {
+      state.enemy.selectedId =
+        enemies.find(
+          (enemy) =>
+            enemy.category === 'boss' &&
+            enemyAvailableInSelectedMode(enemy),
+        )?.enemyId ??
+        enemies.find(enemyAvailableInSelectedMode)?.enemyId ??
+        '';
     }
     strongholdMode.value = mode.id;
     strongholdRound.innerHTML = mode.rounds
@@ -2047,17 +2113,48 @@
       ? roundSnapshot.bossHpByMode?.[boss.bossId]?.[mode.id]
       : null;
     const randomSummary = roundSnapshot.randomEnemyAttributes;
+    const runtimeRules = roundSnapshot.runtimeEnemyRules ?? {};
+    const branchRows = (variant.conditionalBranches ?? [])
+      .map(
+        (branch) =>
+          `<span><b>${escapeHtml(branch.branchId)}</b> · ${branch.spawnCount} 敌</span>`,
+      )
+      .join('');
+    const modeInactiveCount = mode.inactiveEnemyKeys?.length ?? 0;
+    const tableCounts = roundSnapshot.tableCounts ?? {};
+    const specialEnemyCount = Object.values(
+      roundSnapshot.specialEnemyPools ?? {},
+    ).reduce((sum, pool) => sum + (pool.count ?? 0), 0);
+    const cardCounts = Object.entries(roundSnapshot.cardPool ?? {})
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([tier, cards]) => `${tier}阶 ${cards.visible?.length ?? 0}`)
+      .join(' · ');
     strongholdWaveSummary.innerHTML = `
       <span>本波普通敌人总血<br><b>${number.format(variant.normalHp)}</b></span>
       <span>生成数量<br><b>${number.format(variant.spawnCount)}</b></span>
       <span>全回合普通血量<br><b>${formatHpRange(round.normalHpMin, round.normalHpMax)}</b></span>
       <span>本波领袖<br><b>${boss ? escapeHtml(boss.name) : '无'}</b>${bossHp ? ` · 单体 ${number.format(bossHp)}` : ''}</span>
+      <span>关卡战斗上限<br><b>${decimal.format(currentBattleTimeLimit())}s</b> · 部署上限 ${number.format(variant.characterLimit ?? 0)}</span>
       ${
-        variant.randomSpawnCount || variant.hiddenSpawnCount
-          ? `<p>本波含 ${variant.randomSpawnCount} 个随机替换槽、${variant.hiddenSpawnCount} 个隐藏组生成槽；具体替换目标必须从运行时状态确认。</p>`
-          : '<p>本波没有随机替换或隐藏组生成项；基础血量可直接复现。</p>'
+        variant.conditionalBranchCount
+          ? `<p>另有 ${variant.conditionalBranchCount} 条条件分支，累计 ${variant.conditionalSpawnCount} 个增援，未计入本波基础总血。</p>`
+          : '<p>本波没有条件增援分支。</p>'
       }
-      <p>随机替换表共 ${number.format(randomSummary?.count ?? 0)} 条，等级字段均为 ${escapeHtml((randomSummary?.levelValues ?? [0]).join(' / '))}；它不是额外生命倍率。</p>
+      <p>运行时替换：每场登记 ${number.format(runtimeRules.minReplacedEnemyCount ?? 0)}–${number.format(runtimeRules.maxReplacedEnemyCount ?? 0)} 个替换位，多人特殊敌人名额 ${number.format(runtimeRules.specialEnemyNum ?? 0)}。随机池共 ${number.format(randomSummary?.count ?? 0)} 条，具体组合取决于本局运行时状态。</p>
+      <p>本难度禁用 ${number.format(modeInactiveCount)} 名敌人；本期每阶可见干员原型：${escapeHtml(cardCounts)}。</p>
+      ${
+        branchRows
+          ? `<details class="enemy-branch-details"><summary>查看条件增援分支</summary>${branchRows}</details>`
+          : ''
+      }
+      <details class="enemy-branch-details">
+        <summary>卫戍原始资料覆盖</summary>
+        <span>${number.format(tableCounts.modes ?? 0)} 个模式 · ${number.format(tableCounts.charChessEntries ?? 0)} 条干员棋数据 · ${number.format(tableCounts.shopCharEntries ?? 0)} 条商店原型</span>
+        <span>${number.format(tableCounts.garrisonEffects ?? 0)} 条驻守/特质效果 · ${number.format(tableCounts.effectInfo ?? 0)} 条总效果表 · ${number.format(tableCounts.effectChoices ?? 0)} 条效果选择</span>
+        <span>${number.format(tableCounts.trapChessEntries ?? 0)} 条装备 · ${number.format(tableCounts.skillInfoEntries ?? 0)} 条协议/指令 · ${number.format(specialEnemyCount)} 条特殊敌人池</span>
+        <span>${number.format(Object.keys(roundSnapshot.globalEnemyOverrides ?? {}).length)} 条卫戍全局敌人覆盖 · 63 个关卡含条件分支 · 91 个关卡已审计</span>
+        <span>${number.format(roundSnapshot.eventEnemyEffects?.length ?? 0)} 条悬赏/战术特训增敌效果与 ${number.format(roundSnapshot.teamChoiceEffects?.length ?? 0)} 条队伍选择效果已保留；无法确定触发组合的增援不伪造进基础血量。</span>
+      </details>
     `;
   }
 
@@ -2066,6 +2163,7 @@
     const type = strongholdEnemyType.value;
     const visible = enemies.filter(
       (enemy) =>
+        enemyAvailableInSelectedMode(enemy) &&
         (type === 'all' ||
           (type === 'boss' && enemy.category === 'boss') ||
           (type === 'regular' && enemy.category === 'regular') ||
@@ -2157,6 +2255,8 @@
     const mode = selectedAutochessMode();
     const effect = selectedEnemyEffect();
     const resolved = resolvedStrongholdEnemy(enemy);
+    const globalOverride = resolved.globalOverride;
+    const levelOverride = resolved.levelOverride;
     strongholdEnemyProfile.innerHTML = `
       <strong>${escapeHtml(enemy.name)}</strong>
       <span>${escapeHtml(mode?.name ?? '卫戍')} · ${escapeHtml(enemyCategoryLabel(enemy))} · ${escapeHtml(enemy.enemyIndex || enemy.enemyId)}</span>
@@ -2165,14 +2265,14 @@
         ${
           enemy.category === 'boss'
             ? `<i>${state.enemy.roomSize} 人共享总血 ${number.format(strongholdTargetHp(enemy))}</i>`
-            : `<i>基础生命 ${number.format(enemy.baseHp ?? 0)} × ${decimal.format(mode?.factor ?? 1)}</i>`
+            : `<i>基础生命 ${number.format(resolved.adjustedBaseHp ?? enemy.baseHp ?? 0)} × ${decimal.format(mode?.factor ?? 1)}</i>`
         }
         <i>攻击 ${number.format(resolved.attack ?? 0)}</i>
         <i>防御（物理端） ${number.format(resolved.defense)}</i>
         <i>法术抗性 ${decimal.format(resolved.resistance)}%</i>
-        <i>攻击间隔 ${decimal.format(enemy.attackInterval ?? 0)}s</i>
+        <i>攻击间隔 ${decimal.format(resolved.attackInterval ?? enemy.attackInterval ?? 0)}s</i>
         <i>移动速度 ${decimal.format(resolved.moveSpeed ?? 0)}</i>
-        <i>重量等级 ${number.format(enemy.massLevel ?? 0)}</i>
+        <i>重量等级 ${number.format(resolved.massLevel ?? enemy.massLevel ?? 0)}</i>
         <i>生命损失 ${number.format(enemy.lifePointReduce ?? 0)}</i>
       </div>
       <details class="enemy-factor-details">
@@ -2230,6 +2330,28 @@
           effect
             ? `<p>可选敌方效果：${escapeHtml(effect.name)}；生命 ×${decimal.format(effect.hpMultiplier)}、攻击 ×${decimal.format(effect.attackMultiplier)}、攻速 +${decimal.format(effect.attackSpeedAdd)}、移速 ${effect.moveSpeedAdd > 0 ? '+' : ''}${decimal.format(effect.moveSpeedAdd * 100)}%。</p>`
             : '<p>当前没有叠加可选敌方效果。</p>'
+        }
+        ${
+          globalOverride &&
+          Object.values(globalOverride).some((value) => Number(value) > 0)
+            ? `<p>卫戍全局 EnemyData 覆盖：${escapeHtml(
+                Object.entries(globalOverride)
+                  .filter(([, value]) => Number(value) > 0)
+                  .map(([key, value]) => `${key}=${number.format(value)}`)
+                  .join(' · '),
+              )}。</p>`
+            : ''
+        }
+        ${
+          levelOverride &&
+          Object.values(levelOverride).some((value) => Number(value) > 0)
+            ? `<p>本关 EnemyDbRefs 覆盖：${escapeHtml(
+                Object.entries(levelOverride)
+                  .filter(([, value]) => Number(value) > 0)
+                  .map(([key, value]) => `${key}=${number.format(value)}`)
+                  .join(' · '),
+              )}。</p>`
+            : '<p>本关没有为该敌人登记额外属性覆盖。</p>'
         }
       </details>`;
   }
@@ -2297,6 +2419,7 @@
     const color = colorList[index];
     const operator = findOperator(slot);
     const skill = findSkill(slot, operator);
+    const traitInfo = operator ? traitMap.get(operator.id) : null;
     const isEgir = Boolean(
       operator &&
         bondMatchesOperator(covenantMap.get('egirShip'), operator),
@@ -2372,7 +2495,7 @@
         </details>
         <div class="main-result">
           <div>
-            <span data-role="cycle-label">60 帧终极平均 DPS</span>
+            <span data-role="cycle-label">60 帧当前关卡平均 DPS</span>
             <strong data-role="cycle">—</strong>
           </div>
           <div class="result-pair">
@@ -2395,6 +2518,16 @@
           <p data-role="skill-template"></p>
           <pre data-role="skill-blackboard"></pre>
         </details>
+        ${
+          traitInfo
+            ? `<details class="skill-source">
+                <summary>卫戍特质原文与 Garrison 参数</summary>
+                <small>${escapeHtml(traitInfo.chessId || '')} · ${escapeHtml((traitInfo.garrisonIds ?? []).join(' / '))}</small>
+                <p>${escapeHtml(traitInfo.description || '')}</p>
+                <pre>${escapeHtml(JSON.stringify(traitInfo.garrisons ?? [], null, 2))}</pre>
+              </details>`
+            : ''
+        }
         <details class="advanced">
           <summary>高级参数与手动覆盖</summary>
           <div class="advanced-grid">
@@ -2607,7 +2740,7 @@
         referenceEffects.resistancePenetration,
       ),
       tick: 1 / 60,
-      horizon: 120,
+      horizon: currentBattleTimeLimit(),
       flatHitDamage: talentEffects.flatHitDamage,
       sp:
         useSpState
@@ -3205,7 +3338,7 @@
       );
       card.querySelector('[data-role="ttk"]').textContent =
         item.result.killTime === null
-          ? '> 120s'
+          ? `> ${decimal.format(currentBattleTimeLimit())}s`
           : `${decimal.format(item.result.killTime)}s`;
       card.querySelector('[data-role="simulation-detail"]').textContent =
         `1/60 秒步长 · ${number.format(item.result.ticks)} 帧 · 普攻 ${item.result.normalHits} 次 / 技能 ${item.result.skillHits} 次 · 开技能 ${item.result.skillCasts} 次${
@@ -3263,7 +3396,7 @@
             <td>${number.format(item.result.activeDps)}</td>
             <td class="cycle-cell">${number.format(item.result.cycleDps)}</td>
             <td>${number.format(item.result.damageSummary.totalDamage)}<small class="metric-window">${decimal.format(item.result.damageSummary.windowSeconds)}s</small></td>
-            <td>${item.result.killTime === null ? '&gt; 120s' : `${decimal.format(item.result.killTime)}s`}</td>
+            <td>${item.result.killTime === null ? `&gt; ${decimal.format(currentBattleTimeLimit())}s` : `${decimal.format(item.result.killTime)}s`}</td>
             <td>${number.format(item.equivalentHp)}</td>
             <td>${decimal.format(item.result.normalInterval)}s</td>
             <td>${escapeHtml(covenantSummary(item.covenant))}</td>
@@ -4239,7 +4372,7 @@
   document.querySelector('#covenant-count').textContent =
     `${covenantSnapshot.covenantCount} 条盟约`;
   document.querySelector('#data-date').textContent =
-    `V3_1 · b2026-11-22.11 · 卫戍干员 ${operators.length} · 卫戍敌人 ${enemies.length} · 4 难度 / 59 回合 · ${equipment.length} 装备 / ${commands.length} 指令`;
+    `V3_1 · b2026-11-22.12 · 卫戍干员 ${operators.length} · 卫戍敌人 ${enemies.length} · 4 难度 / 59 回合 · 26 模式 / 91 关卡审计 · ${equipment.length} 装备 / ${commands.length} 指令`;
   state.slots = [
     createSlot(),
     createSlot(),

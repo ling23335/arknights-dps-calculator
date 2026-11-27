@@ -49,8 +49,13 @@ http://电脑IPv4地址:4173/
 - 普通敌人生命 = 本地 `EnemyDatabase` 基础生命 × 难度倍率，攻击 `×5`、防御 `×3`、法抗 `×3` 的全局倍率同样进入属性解析；同一敌人在同一回合使用固定等级 0 基础血。
 - 领袖生命直接读取所选难度 `BloodDataDict`，不再乘难度倍率。BloodData 是单体血表；多人房间共享总血按当前人数倍率显示。
 - 每回合普通敌人总血由本地关卡 FlatBuffers 的实际生成动作、生成数量与敌人基础生命求和；后期血量增长主要来自敌人数量和高阶/精英构成，而不是隐藏的逐回合乘区。
+- 关卡内的 `EnemyDbRefs.OverwrittenData` 会作为当前波次的本地敌人覆盖；例如 `h07_02` 的 `enemy_1430_lrrook` 使用 60,000 当地生命，而不是通用数据库的 100,000。
+- 每个波次也读取本地关卡战斗上限：前几回合为 45/55 秒，首领波最高 120 秒；逐帧模拟的击杀窗口和总伤窗口会随当前关卡变化。
+- 63 个卫戍关卡含条件增援分支，包括 Boss 召唤、Boss 逃逸、双手分身和额外路线。分支增援单独展示，不计入确定性的基础波次血量。
+- 标准与险境模拟会按 `InactiveEnemyKey` 排除相同的 18 名敌人；绝境与终极模拟不额外排除。
 - 可启用本地 40 条 `aceffect_enemy_*` 敌方增益/削弱效果；生命与攻击乘区会进入属性解析，攻速与移速参数同时保留展示。
 - 本地 456 条随机替换表只用于运行时选择具体替换敌人，不能把概率或效率系数直接乘到基础波次血量。界面单独标注随机/隐藏生成槽，避免伪造确定性总血。
+- 本地规则登记 1–5 个运行时替换位、多人 3 个特殊敌人名额；这些是运行时预算，不是固定波次倍率。129 条悬赏/战术特训增敌效果和 31 条队伍选择效果已保留供核查。
 - 标准模拟只启用本地登记的 18 条盟约；其余三档启用全部 26 条。切换到标准模拟时，本难度不存在的盟约保留配置但不进入 DPS。
 - 使用 60 帧固定步长逐帧模拟攻击命中、技能开启、技能持续与回转，而非只看平均值公式。
 - 每个方案展示当前敌人条件下的普攻 DPH、技能 DPH、模拟窗口总伤和元素爆条总伤；战况图提示与 CSV 同步包含这些字段。
@@ -61,6 +66,7 @@ http://电脑IPv4地址:4173/
 - 技能倍率与段数优先读取本地 `skill_table` 的 Blackboard；每个技能可展开查看技能 ID、原描述模板和全部解包参数。
 - 可手动覆盖倍率、段数、无视防御、无视法抗和伤害类型。
 - 普通天赋会按本地 Blackboard 自动折算攻击、攻速、回技、初始技力、概率期望、法抗无视和固定附加伤害；阵亡、阻挡、受击、召唤等条件会明确标注为未自动折算。
+- 卫戍特质会展开显示 `CharChessDataDict` 与 `GarrisonDataDict` 的原文、事件类型、效果类型和完整 Blackboard，便于核对自动折算范围。
 - 曲线默认以实际盟约层数作为横轴，展示纯 DPS 增长；敌人保持当前难度、回合、效果和房间人数下的数值不变，也可切换为随防御力或法术抗性变化。
 - 图表左侧可选择一条盟约作为扫描变量；只改变该盟约层数，其余已选盟约保持当前层数，切换盟约后横轴范围同步更新。
 - 切换干员时，如果当前横轴不影响该干员，会自动跟随到其有输出收益的所属盟约；“特质回技”会按当前方案选择实际相关盟约。
@@ -106,9 +112,11 @@ npm run extract:operators
 npm run extract:modules
 npm run audit:roster
 npm run audit:skills
+npm run audit:tables
+npm run audit:levels
 ```
 
-`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:rounds` 解析本地关卡 FlatBuffers、四档 BattleData、Boss BloodData、波次生成项和敌方效果；`extract:traits` 提取卫戍协议干员专属特质；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计；`audit:skills` 校验全部技能 ID、原描述模板、Blackboard 和逐帧模拟结果。写文件前会校验数量和必填文本。
+`refresh` 使用本机 Microsoft Edge 绕过 PRTS 对普通 HTTP 客户端的限制，再通过 MediaWiki API 分批读取干员原始资料。`extract:reference` 从本地热更新的 `activity_table` 与 `character_table` 生成装备、指令快照；`extract:ultimate` 应用终极模拟模式倍率与领袖血量表；`extract:rounds` 解析本地关卡 FlatBuffers、四档 BattleData、Boss BloodData、波次生成项、条件分支、EnemyDbRefs、特殊敌人池和全部敌方效果；`extract:traits` 提取卫戍协议干员专属特质与 Garrison 参数；`extract:operators` 从本地 `character_table` 与 `skill_table` 生成 143 名卫戍干员的属性、信赖、潜能、技能与天赋；`extract:modules` 从本地模组表生成三级模组数据；`audit:roster` 输出全干员技能、特质、天赋和条件机制风险统计；`audit:skills` 校验全部技能 ID、原描述模板、Blackboard 和逐帧模拟结果；`audit:tables` 检查 26 个模式、全部干员原型、商店、盟约、装备、指令和特殊敌人池的引用完整性；`audit:levels` 审计全部 91 个卫戍关卡的 FlatBuffer 字段、分支和本地敌人覆盖。写文件前会校验数量和必填文本。
 
 ## 验证
 
@@ -121,7 +129,7 @@ npm run audit:browser
 
 ## 计算边界
 
-这是统一横向比较模型，不会为 143 名卫戍干员的全部特殊机制逐一编写模拟器。召唤物、随机目标、持续场、元素爆发和复杂天赋默认不会自动拆成独立事件；页面会保留本地解包原文、Blackboard 与模板，并在“高级参数”中提供手动覆盖。
+这是统一横向比较模型，不会为 143 名卫戍干员的全部特殊机制逐一编写模拟器。召唤物、随机目标、持续场、元素爆发和复杂天赋默认不会自动拆成独立事件；页面会保留本地解包原文、Garrison/Blackboard 与模板，并在“高级参数”中提供手动覆盖。
 
 卫戍协议数据对应当前本地 `act3autochess / V3_1`。装备与指令面板会把可识别的常驻数值参数折算为 DPS 修正；涉及触发条件、随机、召唤、经济或场地的效果会保留完整文本和原始参数，不会伪装成无条件收益。
 

@@ -950,6 +950,22 @@ input[type="search"]:focus {
   line-height: 1.45;
 }
 
+.enemy-branch-details {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.enemy-branch-details summary {
+  cursor: pointer;
+}
+
+.enemy-branch-details span {
+  display: block;
+  margin-top: 4px;
+  color: var(--soft);
+}
+
 .stronghold-enemy-panel.is-disabled {
   display: none;
 }

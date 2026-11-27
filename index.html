@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="app-build" content="2026-11-22.11">
+  <meta name="app-build" content="2026-11-22.12">
   <title>PRTS Alliance Lab · 卫戍协议盟约计算</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b1017%22/><path d=%22M15 43 26 18h12l11 25h-9l-2-6H26l-2 6z%22 fill=%22%23ffb168%22/><path d=%22M29 30h6l-3-8z%22 fill=%22%230b1017%22/></svg>">
-  <link rel="stylesheet" href="src/styles.css?v=2026-11-22.11">
+  <link rel="stylesheet" href="src/styles.css?v=2026-11-22.12">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -153,7 +153,7 @@
               <p><b>法术</b> 攻击 × (1 - 法抗)，最低保留 5%</p>
               <p><b>逐帧</b> 以 1/60 秒为步长推进攻击、技能持续和回转，按实际命中事件累计伤害与击杀时间。</p>
               <p><b>DPH</b> 单次命中经过当前敌人防御、法抗和穿透后的实际伤害；多段技能按平均每段显示。</p>
-              <p><b>总伤</b> 当前模拟窗口内击杀前或 120 秒内的累计伤害；元素爆条单独标出。</p>
+              <p><b>总伤</b> 当前模拟窗口内击杀前或所选关卡战斗上限内的累计伤害；元素爆条单独标出。</p>
               <p><b>充能</b> 可充能技能逐个消耗存量；点燃每次消耗后进入 36 帧与当前攻击间隔的较小值作为阻回时间。</p>
               <p><b>卫戍敌人</b> 普通敌人使用本地基础属性乘所选难度倍率；领袖生命直接读取该难度 BloodDataDict。波次总血由实际生成数量与敌人构成求和。</p>
               <p><b>盟约</b> 数据来自本地热更新；干员只自动应用其实际所属且达到激活人数的盟约。</p>
@@ -425,15 +425,15 @@
   </div>
 
   <noscript>这个页面需要启用 JavaScript 才能计算 DPS。</noscript>
-  <script src="data/operators-autochess.js?v=2026-11-22.11"></script>
-  <script src="data/covenants.js?v=2026-11-22.11"></script>
-  <script src="data/enemies.js?v=2026-11-22.11"></script>
-  <script src="data/autochess-rounds.js?v=2026-11-22.11"></script>
-  <script src="data/equipment.js?v=2026-11-22.11"></script>
-  <script src="data/commands.js?v=2026-11-22.11"></script>
-  <script src="data/autochess-traits.js?v=2026-11-22.11"></script>
-  <script src="data/autochess-modules.js?v=2026-11-22.11"></script>
-  <script src="src/calc.js?v=2026-11-22.11"></script>
-  <script src="src/app.js?v=2026-11-22.11"></script>
+  <script src="data/operators-autochess.js?v=2026-11-22.12"></script>
+  <script src="data/covenants.js?v=2026-11-22.12"></script>
+  <script src="data/enemies.js?v=2026-11-22.12"></script>
+  <script src="data/autochess-rounds.js?v=2026-11-22.12"></script>
+  <script src="data/equipment.js?v=2026-11-22.12"></script>
+  <script src="data/commands.js?v=2026-11-22.12"></script>
+  <script src="data/autochess-traits.js?v=2026-11-22.12"></script>
+  <script src="data/autochess-modules.js?v=2026-11-22.12"></script>
+  <script src="src/calc.js?v=2026-11-22.12"></script>
+  <script src="src/app.js?v=2026-11-22.12"></script>
 </body>
 </html>

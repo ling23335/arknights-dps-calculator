@@ -20,12 +20,33 @@ for (const shop of Object.values(season.CharShopChessDatas)) {
   if (!shop.CharId || !chess?.Desc) continue;
   const current = traits.get(shop.CharId);
   if (current && current.level > (shop.ChessLevel ?? 0)) continue;
+  const garrisonIds = chess.GarrisonIds ?? [];
+  const garrisons = garrisonIds.flatMap((garrisonId) => {
+    const garrison = season.GarrisonDataDict?.[garrisonId];
+    return garrison
+      ? [
+          {
+            id: garrisonId,
+            eventType: garrison.EventType,
+            eventTypeDesc: garrison.EventTypeDesc,
+            effectType: garrison.EffectType,
+            description: stripGameMarkup(
+              garrison.Description || garrison.GarrisonDesc,
+            ),
+            blackboard: garrison.Blackboard ?? {},
+            battleRuneKey: garrison.BattleRuneKey ?? null,
+          },
+        ]
+      : [];
+  });
   traits.set(shop.CharId, {
     charId: shop.CharId,
     name: characters[shop.CharId]?.Name ?? shop.CharId,
     chessId: shop.ChessId,
     level: shop.ChessLevel ?? 0,
     bondIds: chess.BondIds ?? [],
+    garrisonIds,
+    garrisons,
     description: stripGameMarkup(chess.Desc),
   });
 }

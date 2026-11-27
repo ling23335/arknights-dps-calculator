@@ -105,11 +105,16 @@ function resolveAutochessEnemyStats(enemy, mode, options = {}) {
       (Number(enemy?.attackSpeed) || 0) +
         (Number(enemyEffect.attackSpeedAdd) || 0),
     ),
+    attackInterval: Math.max(
+      0,
+      Number(enemy?.attackInterval) || 0,
+    ),
     moveSpeed: Math.max(
       0,
       (Number(enemy?.moveSpeed) || 0) *
         (1 + (Number(enemyEffect.moveSpeedAdd) || 0)),
     ),
+    massLevel: Math.max(0, Number(enemy?.massLevel) || 0),
   };
 }
 

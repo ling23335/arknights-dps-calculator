@@ -186,6 +186,11 @@ test('local autochess round snapshot covers all multiplayer rounds and boss tabl
     614900,
   );
   assert.equal(
+    modes.mode_multi_funny.rounds.find((round) => round.round === 1)
+      .variants[0].maxPlayTime,
+    45,
+  );
+  assert.equal(
     modes.mode_multi_abyss.rounds.find((round) => round.round === 13)
       .normalHpMin,
     922350,
@@ -194,6 +199,11 @@ test('local autochess round snapshot covers all multiplayer rounds and boss tabl
     modes.mode_multi_abyss.rounds.find((round) => round.round === 14)
       .variants.length,
     10,
+  );
+  assert.equal(
+    modes.mode_multi_abyss.rounds.find((round) => round.round === 14)
+      .variants[0].maxPlayTime,
+    120,
   );
   assert.equal(
     modes.mode_multi_abyss.rounds.find((round) => round.round === 15)
@@ -205,8 +215,48 @@ test('local autochess round snapshot covers all multiplayer rounds and boss tabl
     7885000,
   );
   assert.equal(snapshot.enemyEffects.length, 40);
+  assert.equal(snapshot.allModeOrder.length, 26);
+  assert.equal(Object.keys(snapshot.allModes).length, 26);
+  assert.equal(snapshot.eventEnemyEffects.length, 129);
+  assert.equal(snapshot.teamChoiceEffects.length, 31);
   assert.equal(snapshot.randomEnemyAttributes.count, 456);
   assert.deepEqual(snapshot.randomEnemyAttributes.levelValues, [0]);
+  assert.equal(
+    modes.mode_multi_funny.inactiveEnemyKeys.length,
+    18,
+  );
+  assert.equal(
+    snapshot.runtimeEnemyRules.maxReplacedEnemyCount,
+    5,
+  );
+  assert.equal(snapshot.runtimeEnemyRules.specialEnemyNum, 3);
+  assert.equal(
+    snapshot.globalEnemyOverrides.enemy_10163_mnctur_2.stats.hp,
+    28000,
+  );
+  assert.equal(
+    snapshot.globalEnemyOverrides.enemy_1362_dfat.stats.attack,
+    900,
+  );
+  assert.equal(Object.keys(snapshot.globalEnemyOverrides).length, 16);
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(snapshot.cardPool).map(([tier, cards]) => [
+        tier,
+        cards.visible.length,
+      ]),
+    ),
+    { 1: 19, 2: 24, 3: 26, 4: 27, 5: 31, 6: 26 },
+  );
+  const levelReferences = snapshot.levels[
+    'Activities/ACT3AUTOCHESS/level_act3autochess_h07_02'
+  ];
+  assert.equal(levelReferences.enemyOverrides.enemy_1430_lrrook.hp, 60000);
+  assert.ok(
+    levelReferences.conditionalBranches.some(
+      (branch) => branch.branchId === 'boss_battle_multi_player',
+    ),
+  );
 });
 
 test('frame simulation separates per-hit damage from multi-hit attack totals', () => {
